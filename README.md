@@ -5,25 +5,25 @@ A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their q
 ## Pipeline overview
 
 ```
-accessions.txt
+accessions.txt  (species<TAB>accession)
       │
       ▼
-download_genome          (NCBI datasets CLI)
-  ├── {acc}.fna
-  └── {acc}.gff3
+download_genome                        (NCBI datasets CLI)
+  ├── results/{species}/{acc}/genome/{acc}.fna
+  └── results/{species}/{acc}/genome/{acc}.gff3
       │
       ▼
-rename_fasta             (NCBI_FastaRename)
-  ├── {acc}_renamed.fasta
-  └── {acc}_renamed.equiv_seqID.txt
+rename_fasta                           (NCBI_FastaRename)
+  ├── results/{species}/{acc}/genome/{acc}_renamed.fasta
+  └── results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt
       │
-      ├──▶ run_quast          → results/{acc}/quast/
-      ├──▶ run_assembly_stats → results/{acc}/assembly_stats/
-      ├──▶ run_busco          → results/{acc}/busco/   (one run per lineage)
-      └──▶ write_gaqet_yaml
-               │
-               ▼
-           run_gaqet      → results/{acc}/gaqet/
+      ├──▶ AssemblyQC/
+      │      ├── run_quast          → results/{species}/{acc}/AssemblyQC/quast/
+      │      ├── run_assembly_stats → results/{species}/{acc}/AssemblyQC/assembly_stats/
+      │      └── run_busco          → results/{species}/{acc}/AssemblyQC/busco/
+      │                                        (one run per lineage)
+      └──▶ AnnotationQC/
+             └── write_gaqet_yaml + run_gaqet → results/{species}/{acc}/AnnotationQC/gaqet/
                                     │
                                     ▼
                                 multiqc  → results/multiqc/multiqc_report.html
