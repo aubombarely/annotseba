@@ -1,5 +1,10 @@
 import os
 
+with open("VERSION") as _vf:
+    VERSION = _vf.read().strip()
+
+print(f"annotseba v{VERSION}")
+
 configfile: "config/config.yaml"
 
 # ── Load accession list (species\taccession\ttaxa_id) ─────────────────────────

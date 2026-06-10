@@ -1,4 +1,4 @@
-# annotseba
+# annotseba v0.1.0
 
 A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their quality and completeness, including genome assembly statistics and annotation quality evaluation.
 
