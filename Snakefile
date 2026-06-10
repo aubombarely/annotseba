@@ -2,38 +2,54 @@ import os
 
 configfile: "config/config.yaml"
 
-# ── Load accession list ────────────────────────────────────────────────────────
+# ── Load accession list (species\taccession) ───────────────────────────────────
+SAMPLES = []
+ACC_TO_SPECIES = {}
 with open(config["accessions_file"]) as fh:
-    ACCESSIONS = [l.strip() for l in fh if l.strip() and not l.startswith("#")]
+    for line in fh:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        species, acc = line.split("\t")
+        SAMPLES.append((species, acc))
+        ACC_TO_SPECIES[acc] = species
 
+SPECIES  = [s for s, a in SAMPLES]
+ACCESSIONS = [a for s, a in SAMPLES]
 LINEAGES = config["busco_lineages"]
 
 # ── Target rule ───────────────────────────────────────────────────────────────
 rule all:
     input:
-        expand("results/{acc}/genome/{acc}.gff3", acc=ACCESSIONS),
-        expand("results/{acc}/genome/{acc}_renamed.fasta", acc=ACCESSIONS),
-        expand("results/{acc}/genome/{acc}_renamed.equiv_seqID.txt", acc=ACCESSIONS),
-        expand("results/{acc}/quast/report.tsv", acc=ACCESSIONS),
-        expand("results/{acc}/assembly_stats/stats.txt", acc=ACCESSIONS),
-        expand(
-            "results/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
-            acc=ACCESSIONS,
-            lineage=LINEAGES,
-        ),
-        expand("results/{acc}/gaqet/{acc}_GAQET.stats.tsv", acc=ACCESSIONS),
+        expand("results/{species}/{acc}/genome/{acc}.gff3",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand("results/{species}/{acc}/genome/{acc}_renamed.fasta",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand("results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand("results/{species}/{acc}/quast/report.tsv",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand("results/{species}/{acc}/assembly_stats/stats.txt",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        [
+            f"results/{s}/{a}/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            for s, a in SAMPLES
+            for l in LINEAGES
+        ],
+        expand("results/{species}/{acc}/gaqet/{acc}_GAQET.stats.tsv",
+               zip, species=SPECIES, acc=ACCESSIONS),
         "results/multiqc/multiqc_report.html",
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
 rule download_genome:
     output:
-        fasta="results/{acc}/genome/{acc}.fna",
-        gff3="results/{acc}/genome/{acc}.gff3",
+        fasta="results/{species}/{acc}/genome/{acc}.fna",
+        gff3="results/{species}/{acc}/genome/{acc}.gff3",
     params:
-        workdir="results/{acc}/genome",
-        zipfile="results/{acc}/genome/ncbi_dataset.zip",
+        workdir="results/{species}/{acc}/genome",
+        zipfile="results/{species}/{acc}/genome/ncbi_dataset.zip",
     log:
-        "logs/download/{acc}.log",
+        "logs/download/{species}/{acc}.log",
     retries: 3
     shell:
         """
@@ -68,16 +84,16 @@ rule download_genome:
 # ── Rename FASTA sequence IDs ─────────────────────────────────────────────────
 rule rename_fasta:
     input:
-        fasta="results/{acc}/genome/{acc}.fna",
+        fasta="results/{species}/{acc}/genome/{acc}.fna",
     output:
-        fasta="results/{acc}/genome/{acc}_renamed.fasta",
-        equiv="results/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
+        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        equiv="results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
     params:
         prefix=config.get("rename_prefix", "seq"),
-        out_basename="results/{acc}/genome/{acc}_renamed",
+        out_basename="results/{species}/{acc}/genome/{acc}_renamed",
         script=config.get("ncbi_fasta_rename_script", "NCBI_FastaRename"),
     log:
-        "logs/rename/{acc}.log",
+        "logs/rename/{species}/{acc}.log",
     shell:
         """
         {params.script} \
@@ -90,16 +106,16 @@ rule rename_fasta:
 # ── QUAST assembly statistics ─────────────────────────────────────────────────
 rule run_quast:
     input:
-        fasta="results/{acc}/genome/{acc}_renamed.fasta",
-        gff3="results/{acc}/genome/{acc}.gff3",
+        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        gff3="results/{species}/{acc}/genome/{acc}.gff3",
     output:
-        report="results/{acc}/quast/report.tsv",
+        report="results/{species}/{acc}/quast/report.tsv",
     params:
-        outdir="results/{acc}/quast",
+        outdir="results/{species}/{acc}/quast",
         threads=config.get("threads", 4),
         min_contig=config.get("quast_min_contig", 500),
     log:
-        "logs/quast/{acc}.log",
+        "logs/quast/{species}/{acc}.log",
     shell:
         """
         quast.py {input.fasta} \
@@ -114,11 +130,11 @@ rule run_quast:
 # ── assembly-stats ────────────────────────────────────────────────────────────
 rule run_assembly_stats:
     input:
-        fasta="results/{acc}/genome/{acc}_renamed.fasta",
+        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
     output:
-        stats="results/{acc}/assembly_stats/stats.txt",
+        stats="results/{species}/{acc}/assembly_stats/stats.txt",
     log:
-        "logs/assembly_stats/{acc}.log",
+        "logs/assembly_stats/{species}/{acc}.log",
     shell:
         """
         mkdir -p $(dirname {output.stats})
@@ -128,16 +144,16 @@ rule run_assembly_stats:
 # ── BUSCO completeness assessment ─────────────────────────────────────────────
 rule run_busco:
     input:
-        fasta="results/{acc}/genome/{acc}_renamed.fasta",
+        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
     output:
-        summary="results/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
+        summary="results/{species}/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
     params:
-        outdir="results/{acc}/busco",
+        outdir="results/{species}/{acc}/busco",
         threads=config.get("threads", 4),
         mode="genome",
         downloads_path=config.get("busco_downloads_path", "busco_downloads"),
     log:
-        "logs/busco/{acc}.log",
+        "logs/busco/{species}/{acc}/{lineage}.log",
     shell:
         """
         busco \
@@ -155,12 +171,12 @@ rule run_busco:
 # ── GAQET2 annotation quality ─────────────────────────────────────────────────
 rule write_gaqet_yaml:
     input:
-        fasta="results/{acc}/genome/{acc}_renamed.fasta",
-        gff3="results/{acc}/genome/{acc}.gff3",
+        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        gff3="results/{species}/{acc}/genome/{acc}.gff3",
     output:
-        yaml="results/{acc}/gaqet/gaqet_config.yaml",
+        yaml="results/{species}/{acc}/gaqet/gaqet_config.yaml",
     params:
-        outdir="results/{acc}/gaqet",
+        outdir="results/{species}/{acc}/gaqet",
         threads=config.get("threads", 4),
         analyses=config.get("gaqet_analyses", ["AGAT", "BUSCO"]),
         busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
@@ -188,11 +204,11 @@ rule write_gaqet_yaml:
 
 rule run_gaqet:
     input:
-        yaml="results/{acc}/gaqet/gaqet_config.yaml",
+        yaml="results/{species}/{acc}/gaqet/gaqet_config.yaml",
     output:
-        stats="results/{acc}/gaqet/{acc}_GAQET.stats.tsv",
+        stats="results/{species}/{acc}/gaqet/{acc}_GAQET.stats.tsv",
     log:
-        "logs/gaqet/{acc}.log",
+        "logs/gaqet/{species}/{acc}.log",
     shell:
         """
         GAQET --YAML {input.yaml} >{log} 2>&1
@@ -201,12 +217,13 @@ rule run_gaqet:
 # ── MultiQC aggregate report ───────────────────────────────────────────────────
 rule multiqc:
     input:
-        quast=expand("results/{acc}/quast/report.tsv", acc=ACCESSIONS),
-        busco=expand(
-            "results/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
-            acc=ACCESSIONS,
-            lineage=LINEAGES,
-        ),
+        quast=expand("results/{species}/{acc}/quast/report.tsv",
+                     zip, species=SPECIES, acc=ACCESSIONS),
+        busco=[
+            f"results/{s}/{a}/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            for s, a in SAMPLES
+            for l in LINEAGES
+        ],
     output:
         report="results/multiqc/multiqc_report.html",
     params:

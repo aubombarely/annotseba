@@ -1,4 +1,4 @@
-# One NCBI genome accession per line (GCA_* or GCF_*)
-# Lines starting with '#' are ignored
-GCA_000001405.29
-GCA_000001735.4
+# Format: species<TAB>accession
+# Species names should not contain spaces (use underscores)
+Homo_sapiens	GCA_000001405.29
+Arabidopsis_thaliana	GCA_000001735.4

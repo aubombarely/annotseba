@@ -54,11 +54,12 @@ Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/con
 
 ## Usage
 
-**1. Add your accession IDs to `accessions.txt`** (one GCA_* or GCF_* per line):
+**1. Add your entries to `accessions.txt`** (tab-separated `species<TAB>accession`, one per line):
 ```
-GCA_000001405.29
-GCA_000001735.4
+Homo_sapiens	GCA_000001405.29
+Arabidopsis_thaliana	GCA_000001735.4
 ```
+Species names should not contain spaces — use underscores.
 
 **2. Edit `config/config.yaml`** — key settings to review before running:
 
@@ -95,22 +96,27 @@ bash run_pipeline.sh --cores 8
 
 ```
 results/
-└── {accession}/
-    ├── genome/
-    │   ├── {accession}.fna                       # raw genome FASTA
-    │   ├── {accession}.gff3                      # genome annotation
-    │   ├── {accession}_renamed.fasta             # renamed sequence IDs
-    │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
-    ├── quast/                                    # QUAST assembly report
-    ├── assembly_stats/                           # assembly-stats output
-    ├── busco/                                    # one subdirectory per lineage
-    │   └── {accession}/
-    │       └── short_summary.specific.{lineage}.{accession}.txt
-    └── gaqet/                                    # GAQET2 annotation QC
-        ├── gaqet_config.yaml
-        └── {accession}_GAQET.stats.tsv
+└── {species}/
+    └── {accession}/
+        ├── genome/
+        │   ├── {accession}.fna                       # raw genome FASTA
+        │   ├── {accession}.gff3                      # genome annotation
+        │   ├── {accession}_renamed.fasta             # renamed sequence IDs
+        │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
+        ├── quast/                                    # QUAST assembly report
+        ├── assembly_stats/                           # assembly-stats output
+        ├── busco/                                    # one subdirectory per lineage
+        │   └── {accession}/
+        │       └── short_summary.specific.{lineage}.{accession}.txt
+        └── gaqet/                                    # GAQET2 annotation QC
+            ├── gaqet_config.yaml
+            └── {accession}_GAQET.stats.tsv
 results/multiqc/
-    └── multiqc_report.html                       # aggregated report
+    └── multiqc_report.html                           # aggregated report
+logs/
+└── {rule}/
+    └── {species}/
+        └── {accession}.log
 ```
 
 ## Configuration
