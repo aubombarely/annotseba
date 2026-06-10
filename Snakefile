@@ -42,11 +42,15 @@ rule all:
         expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
         f"{OUTDIR}/multiqc/multiqc_report.html",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta.gz",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3.gz",
+               zip, species=SPECIES, acc=ACCESSIONS),
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
 rule download_genome:
     output:
-        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.fna",
+        fasta=temp(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.fna"),
         gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
     params:
         workdir=f"{OUTDIR}/{{species}}/{{acc}}/genome",
@@ -217,6 +221,30 @@ rule run_gaqet:
     shell:
         """
         GAQET --YAML {input.yaml} >{log} 2>&1
+        """
+
+# ── Compress genome files after all QC is done ────────────────────────────────
+rule compress:
+    input:
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        # Wait for all QC outputs before compressing
+        quast=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
+        assembly_stats=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
+        busco=[
+            f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{acc}}/short_summary.specific.{l}.{{acc}}.txt"
+            for l in LINEAGES
+        ],
+        gaqet=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+    output:
+        fasta_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta.gz",
+        gff3_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3.gz",
+    log:
+        "logs/compress/{species}/{acc}.log",
+    shell:
+        """
+        gzip -k {input.fasta} >{log} 2>&1
+        gzip -k {input.gff3}  >>{log} 2>&1
         """
 
 # ── MultiQC aggregate report ───────────────────────────────────────────────────
