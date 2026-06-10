@@ -154,3 +154,36 @@ All settings are in `config/config.yaml`:
 | Fungi | `fungi_odb10`, `ascomycota_odb10`, `basidiomycota_odb10` |
 
 Full list: https://busco.ezlab.org/list_of_lineages.html
+
+## Third-party tools
+
+annotseba would not be possible without the following tools. Please cite them appropriately in your work.
+
+### Direct dependencies
+
+| Tool | Repository | Reference |
+|------|-----------|-----------|
+| NCBI Datasets CLI | https://github.com/ncbi/datasets | Sayers et al. 2022, Nucleic Acids Res. |
+| NCBI_FastaRename | https://github.com/aubombarely/GenoToolBox | — |
+| QUAST | https://github.com/ablab/quast | Gurevich et al. 2013, Bioinformatics |
+| assembly-stats | https://github.com/sanger-pathogens/assembly-stats | — |
+| BUSCO | https://gitlab.com/ezlab/busco | Manni et al. 2021, Mol. Biol. Evol. |
+| GAQET2 | https://github.com/victorgcb1987/GAQET2 | — |
+| MultiQC | https://github.com/MultiQC/MultiQC | Ewels et al. 2016, Bioinformatics |
+
+### GAQET2 dependencies
+
+These tools are used internally by GAQET2 depending on which analyses are enabled:
+
+| Tool | Repository |
+|------|-----------|
+| AGAT | https://github.com/NBISweden/AGAT |
+| GFFread | https://github.com/gpertea/gffread |
+| OMAmer | https://github.com/DessimozLab/omamer |
+| OMArk | https://github.com/DessimozLab/OMArk |
+| BUSCO | https://gitlab.com/ezlab/busco |
+| Diamond | https://github.com/bbuchfink/diamond |
+| TEsorter | https://github.com/zhangrengang/TEsorter |
+| InterProScan | https://github.com/ebi-pf-team/interproscan |
+| PSAURON | https://github.com/salzberg-lab/PSAURON |
+| DeTEnGA | https://github.com/victorgcb1987/DeTEnGA |
