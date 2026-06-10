@@ -5,28 +5,32 @@ A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their q
 ## Pipeline overview
 
 ```
-accessions.txt  (species<TAB>accession)
+accessions.txt  (species<TAB>accession<TAB>taxa_id)
       │
       ▼
 download_genome                        (NCBI datasets CLI)
-  ├── results/{species}/{acc}/genome/{acc}.fna
-  └── results/{species}/{acc}/genome/{acc}.gff3
+  ├── {outdir}/{species}/{acc}/genome/{acc}.fna   [temp — deleted after renaming]
+  └── {outdir}/{species}/{acc}/genome/{acc}.gff3
       │
       ▼
 rename_fasta                           (NCBI_FastaRename)
-  ├── results/{species}/{acc}/genome/{acc}_renamed.fasta
-  └── results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt
+  ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta
+  └── {outdir}/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt
       │
       ├──▶ AssemblyQC/
-      │      ├── run_quast          → results/{species}/{acc}/AssemblyQC/quast/
-      │      ├── run_assembly_stats → results/{species}/{acc}/AssemblyQC/assembly_stats/
-      │      └── run_busco          → results/{species}/{acc}/AssemblyQC/busco/
+      │      ├── run_quast          → {outdir}/{species}/{acc}/AssemblyQC/quast/
+      │      ├── run_assembly_stats → {outdir}/{species}/{acc}/AssemblyQC/assembly_stats/
+      │      └── run_busco          → {outdir}/{species}/{acc}/AssemblyQC/busco/
       │                                        (one run per lineage)
-      └──▶ AnnotationQC/
-             └── write_gaqet_yaml + run_gaqet → results/{species}/{acc}/AnnotationQC/gaqet/
-                                    │
-                                    ▼
-                                multiqc  → results/multiqc/multiqc_report.html
+      ├──▶ AnnotationQC/
+      │      └── write_gaqet_yaml + run_gaqet → {outdir}/{species}/{acc}/AnnotationQC/gaqet/
+      │                                    │
+      │                                    ▼
+      │                                multiqc  → {outdir}/multiqc/multiqc_report.html
+      │
+      └──▶ compress  (after all QC)
+             ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta.gz
+             └── {outdir}/{species}/{acc}/genome/{acc}.gff3.gz
 ```
 
 ## Tools used
@@ -95,14 +99,16 @@ bash run_annotseba.sh --cores 8
 ## Output structure
 
 ```
-results/
+{outdir}/
 └── {species}/
     └── {accession}/
         ├── genome/
-        │   ├── {accession}.fna                       # raw genome FASTA
         │   ├── {accession}.gff3                      # genome annotation
+        │   ├── {accession}.gff3.gz                   # compressed after QC
         │   ├── {accession}_renamed.fasta             # renamed sequence IDs
+        │   ├── {accession}_renamed.fasta.gz          # compressed after QC
         │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
+        │   (note: raw {accession}.fna is deleted automatically after renaming)
         ├── AssemblyQC/
         │   ├── quast/                                # QUAST assembly report
         │   ├── assembly_stats/                       # assembly-stats output
@@ -113,12 +119,12 @@ results/
             └── gaqet/                                # GAQET2 annotation QC
                 ├── gaqet_config.yaml
                 └── {accession}_GAQET.stats.tsv
-results/multiqc/
+{outdir}/multiqc/
     └── multiqc_report.html                           # aggregated report
 logs/
 └── {rule}/
     └── {species}/
-        └── {accession}.log
+        └── {accession}.log                           # compress, busco also include lineage
 ```
 
 ## Configuration
