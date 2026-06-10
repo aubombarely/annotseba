@@ -2,17 +2,19 @@ import os
 
 configfile: "config/config.yaml"
 
-# ── Load accession list (species\taccession) ───────────────────────────────────
+# ── Load accession list (species\taccession\ttaxa_id) ─────────────────────────
 SAMPLES = []
 ACC_TO_SPECIES = {}
+ACC_TO_TAXID   = {}
 with open(config["accessions_file"]) as fh:
     for line in fh:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        species, acc = line.split("\t")
+        species, acc, taxa_id = line.split("\t")
         SAMPLES.append((species, acc))
         ACC_TO_SPECIES[acc] = species
+        ACC_TO_TAXID[acc]   = taxa_id
 
 SPECIES    = [s for s, a in SAMPLES]
 ACCESSIONS = [a for s, a in SAMPLES]
@@ -183,6 +185,7 @@ rule write_gaqet_yaml:
         busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
         omark_db=config.get("omark_db", ""),
         detenga_db=config.get("detenga_db", ""),
+        taxa_id=lambda wildcards: ACC_TO_TAXID[wildcards.acc],
     run:
         import yaml, os
         os.makedirs(params.outdir, exist_ok=True)
@@ -197,7 +200,8 @@ rule write_gaqet_yaml:
         if "BUSCO" in params.analyses:
             cfg["BUSCO_lineages"] = params.busco_downloads
         if "OMARK" in params.analyses:
-            cfg["OMARK_db"] = params.omark_db
+            cfg["OMARK_db"]  = params.omark_db
+            cfg["taxid"]     = params.taxa_id
         if "DETENGA" in params.analyses:
             cfg["DETENGA_db"] = params.detenga_db
         with open(output.yaml, "w") as fh:

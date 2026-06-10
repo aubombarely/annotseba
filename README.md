@@ -54,12 +54,12 @@ Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/con
 
 ## Usage
 
-**1. Add your entries to `accessions.txt`** (tab-separated `species<TAB>accession`, one per line):
+**1. Add your entries to `accessions.txt`** (tab-separated `species<TAB>accession<TAB>taxa_id`, one per line):
 ```
-Homo_sapiens	GCA_000001405.29
-Arabidopsis_thaliana	GCA_000001735.4
+Homo_sapiens	GCA_000001405.29	9606
+Arabidopsis_thaliana	GCA_000001735.4	3702
 ```
-Species names should not contain spaces — use underscores.
+Species names should not contain spaces — use underscores. The `taxa_id` is the NCBI Taxonomy ID, required when using the OMARK analysis in GAQET2.
 
 **2. Edit `config/config.yaml`** — key settings to review before running:
 
