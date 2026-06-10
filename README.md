@@ -49,7 +49,7 @@ rename_fasta                           (NCBI_FastaRename)
 
 ```bash
 conda env create -f envs/pipeline.yaml
-conda activate genome_pipeline
+conda activate annotseba
 ```
 
 > **Note:** GAQET2 has additional dependencies (InterproScan, OMAmer, etc.) that may require manual installation. See the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) for details.
