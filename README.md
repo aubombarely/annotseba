@@ -89,7 +89,7 @@ snakemake --dryrun --cores 8
 
 **4. Run the pipeline:**
 ```bash
-bash run_pipeline.sh --cores 8
+bash run_annotseba.sh --cores 8
 ```
 
 ## Output structure
