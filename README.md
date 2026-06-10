@@ -52,7 +52,7 @@ conda env create -f envs/pipeline.yaml
 conda activate annotseba
 ```
 
-> **Note:** GAQET2 has additional dependencies (InterproScan, OMAmer, etc.) that may require manual installation. See the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) for details.
+> **GAQET2 must be installed separately** before running the pipeline, as its heavy dependencies (InterproScan, OMAmer, TEsorter, etc.) can conflict with other tools. Follow the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) and ensure the `GAQET` command is available on your `$PATH` before running annotseba.
 
 Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/config.yaml`.
 
