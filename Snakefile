@@ -27,16 +27,16 @@ rule all:
                zip, species=SPECIES, acc=ACCESSIONS),
         expand("results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/quast/report.tsv",
+        expand("results/{species}/{acc}/AssemblyQC/quast/report.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/assembly_stats/stats.txt",
+        expand("results/{species}/{acc}/AssemblyQC/assembly_stats/stats.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
         [
-            f"results/{s}/{a}/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"results/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES
             for l in LINEAGES
         ],
-        expand("results/{species}/{acc}/gaqet/{acc}_GAQET.stats.tsv",
+        expand("results/{species}/{acc}/AnnotationQC/gaqet/{acc}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
         "results/multiqc/multiqc_report.html",
 
@@ -109,9 +109,9 @@ rule run_quast:
         fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
         gff3="results/{species}/{acc}/genome/{acc}.gff3",
     output:
-        report="results/{species}/{acc}/quast/report.tsv",
+        report="results/{species}/{acc}/AssemblyQC/quast/report.tsv",
     params:
-        outdir="results/{species}/{acc}/quast",
+        outdir="results/{species}/{acc}/AssemblyQC/quast",
         threads=config.get("threads", 4),
         min_contig=config.get("quast_min_contig", 500),
     log:
@@ -132,7 +132,7 @@ rule run_assembly_stats:
     input:
         fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
     output:
-        stats="results/{species}/{acc}/assembly_stats/stats.txt",
+        stats="results/{species}/{acc}/AssemblyQC/assembly_stats/stats.txt",
     log:
         "logs/assembly_stats/{species}/{acc}.log",
     shell:
@@ -146,9 +146,9 @@ rule run_busco:
     input:
         fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
     output:
-        summary="results/{species}/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
+        summary="results/{species}/{acc}/AssemblyQC/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
     params:
-        outdir="results/{species}/{acc}/busco",
+        outdir="results/{species}/{acc}/AssemblyQC/busco",
         threads=config.get("threads", 4),
         mode="genome",
         downloads_path=config.get("busco_downloads_path", "busco_downloads"),
@@ -174,9 +174,9 @@ rule write_gaqet_yaml:
         fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
         gff3="results/{species}/{acc}/genome/{acc}.gff3",
     output:
-        yaml="results/{species}/{acc}/gaqet/gaqet_config.yaml",
+        yaml="results/{species}/{acc}/AnnotationQC/gaqet/gaqet_config.yaml",
     params:
-        outdir="results/{species}/{acc}/gaqet",
+        outdir="results/{species}/{acc}/AnnotationQC/gaqet",
         threads=config.get("threads", 4),
         analyses=config.get("gaqet_analyses", ["AGAT", "BUSCO"]),
         busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
@@ -204,9 +204,9 @@ rule write_gaqet_yaml:
 
 rule run_gaqet:
     input:
-        yaml="results/{species}/{acc}/gaqet/gaqet_config.yaml",
+        yaml="results/{species}/{acc}/AnnotationQC/gaqet/gaqet_config.yaml",
     output:
-        stats="results/{species}/{acc}/gaqet/{acc}_GAQET.stats.tsv",
+        stats="results/{species}/{acc}/AnnotationQC/gaqet/{acc}_GAQET.stats.tsv",
     log:
         "logs/gaqet/{species}/{acc}.log",
     shell:
@@ -217,10 +217,10 @@ rule run_gaqet:
 # ── MultiQC aggregate report ───────────────────────────────────────────────────
 rule multiqc:
     input:
-        quast=expand("results/{species}/{acc}/quast/report.tsv",
+        quast=expand("results/{species}/{acc}/AssemblyQC/quast/report.tsv",
                      zip, species=SPECIES, acc=ACCESSIONS),
         busco=[
-            f"results/{s}/{a}/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"results/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES
             for l in LINEAGES
         ],

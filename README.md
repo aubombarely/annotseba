@@ -103,14 +103,16 @@ results/
         │   ├── {accession}.gff3                      # genome annotation
         │   ├── {accession}_renamed.fasta             # renamed sequence IDs
         │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
-        ├── quast/                                    # QUAST assembly report
-        ├── assembly_stats/                           # assembly-stats output
-        ├── busco/                                    # one subdirectory per lineage
-        │   └── {accession}/
-        │       └── short_summary.specific.{lineage}.{accession}.txt
-        └── gaqet/                                    # GAQET2 annotation QC
-            ├── gaqet_config.yaml
-            └── {accession}_GAQET.stats.tsv
+        ├── AssemblyQC/
+        │   ├── quast/                                # QUAST assembly report
+        │   ├── assembly_stats/                       # assembly-stats output
+        │   └── busco/                                # one subdirectory per lineage
+        │       └── {accession}/
+        │           └── short_summary.specific.{lineage}.{accession}.txt
+        └── AnnotationQC/
+            └── gaqet/                                # GAQET2 annotation QC
+                ├── gaqet_config.yaml
+                └── {accession}_GAQET.stats.tsv
 results/multiqc/
     └── multiqc_report.html                           # aggregated report
 logs/
