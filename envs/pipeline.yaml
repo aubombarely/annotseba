@@ -1,0 +1,13 @@
+name: genome_pipeline
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python>=3.9
+  - snakemake>=7.0
+  - ncbi-datasets-cli        # datasets / dataformat CLI
+  - assembly-stats
+  - quast>=5.2
+  - busco>=5.4
+  - multiqc>=1.14

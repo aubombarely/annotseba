@@ -1,0 +1,15 @@
+# Pipeline outputs
+results/
+logs/
+
+# BUSCO lineage database cache
+busco_downloads/
+
+# Snakemake internals
+.snakemake/
+
+# Conda environments
+.conda/
+
+# macOS
+.DS_Store

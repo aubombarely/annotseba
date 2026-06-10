@@ -1,0 +1,25 @@
+# ── Input ──────────────────────────────────────────────────────────────────────
+# Path to a plain text file with one NCBI accession per line (GCA_* or GCF_*)
+accessions_file: "accessions.txt"
+
+# ── BUSCO settings ─────────────────────────────────────────────────────────────
+# One or more BUSCO lineages to run against each genome.
+# Common eukaryotic lineages:
+#   Plants  : embryophyta_odb10, viridiplantae_odb10
+#   Animals : metazoa_odb10, vertebrata_odb10, mammalia_odb10, insecta_odb10
+#   Fungi   : fungi_odb10, ascomycota_odb10, basidiomycota_odb10
+# Full list: https://busco.ezlab.org/list_of_lineages.html
+busco_lineages:
+  - embryophyta_odb10
+  - viridiplantae_odb10
+
+# Local directory where BUSCO will cache downloaded lineage databases.
+# Will be created automatically on first run.
+busco_downloads_path: "busco_downloads"
+
+# ── QUAST settings ─────────────────────────────────────────────────────────────
+# Contigs shorter than this length (bp) are excluded from statistics
+quast_min_contig: 500
+
+# ── Resources ──────────────────────────────────────────────────────────────────
+threads: 8
