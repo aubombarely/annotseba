@@ -1,6 +1,6 @@
 # annotseba
 
-A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their quality and completeness.
+A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their quality and completeness, including genome assembly statistics and annotation quality evaluation.
 
 ## Pipeline overview
 
@@ -8,16 +8,25 @@ A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their q
 accessions.txt
       │
       ▼
-download_genome        (NCBI datasets CLI)
+download_genome          (NCBI datasets CLI)
   ├── {acc}.fna
   └── {acc}.gff3
       │
+      ▼
+rename_fasta             (NCBI_FastaRename)
+  ├── {acc}_renamed.fasta
+  └── {acc}_renamed.equiv_seqID.txt
+      │
       ├──▶ run_quast          → results/{acc}/quast/
       ├──▶ run_assembly_stats → results/{acc}/assembly_stats/
-      └──▶ run_busco          → results/{acc}/busco/   (one run per lineage)
-                                        │
-                                        ▼
-                                    multiqc  → results/multiqc/multiqc_report.html
+      ├──▶ run_busco          → results/{acc}/busco/   (one run per lineage)
+      └──▶ write_gaqet_yaml
+               │
+               ▼
+           run_gaqet      → results/{acc}/gaqet/
+                                    │
+                                    ▼
+                                multiqc  → results/multiqc/multiqc_report.html
 ```
 
 ## Tools used
@@ -25,9 +34,11 @@ download_genome        (NCBI datasets CLI)
 | Tool | Purpose |
 |------|---------|
 | [NCBI datasets CLI](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/) | Download genome FASTA and GFF3 annotation |
-| [QUAST](https://quast.sourceforge.net/) | Assembly statistics (N50, contigs, gene features) |
+| [NCBI_FastaRename](https://github.com/aubombarely/GenoToolBox/blob/master/AnnotThis/NCBI_FastaRename) | Rename sequence IDs with a consistent prefix |
+| [QUAST](https://quast.sourceforge.net/) | Assembly statistics (N50, contigs, gene features via GFF3) |
 | [assembly-stats](https://github.com/sanger-pathogens/assembly-stats) | Lightweight assembly statistics |
-| [BUSCO](https://busco.ezlab.org/) | Genome completeness against conserved gene sets |
+| [BUSCO](https://busco.ezlab.org/) | Genome completeness against conserved gene sets (multiple lineages supported) |
+| [GAQET2](https://github.com/victorgcb1987/GAQET2) | Genome annotation quality evaluation |
 | [MultiQC](https://multiqc.info/) | Aggregate all results into a single HTML report |
 
 ## Installation
@@ -37,6 +48,10 @@ conda env create -f envs/pipeline.yaml
 conda activate genome_pipeline
 ```
 
+> **Note:** GAQET2 has additional dependencies (InterproScan, OMAmer, etc.) that may require manual installation. See the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) for details.
+
+Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/config.yaml`.
+
 ## Usage
 
 **1. Add your accession IDs to `accessions.txt`** (one GCA_* or GCF_* per line):
@@ -45,22 +60,26 @@ GCA_000001405.29
 GCA_000001735.4
 ```
 
-**2. Edit `config/config.yaml`** — at minimum set the BUSCO lineage(s) for your organisms:
+**2. Edit `config/config.yaml`** — key settings to review before running:
+
+- BUSCO lineages for your organisms:
 ```yaml
 busco_lineages:
   - embryophyta_odb10
   - viridiplantae_odb10
 ```
 
-Common lineages:
+- Sequence ID rename prefix:
+```yaml
+rename_prefix: "Sp"
+```
 
-| Organism group | Lineage |
-|----------------|---------|
-| Plants | `embryophyta_odb10`, `viridiplantae_odb10` |
-| Animals | `metazoa_odb10`, `vertebrata_odb10`, `mammalia_odb10`, `insecta_odb10` |
-| Fungi | `fungi_odb10`, `ascomycota_odb10`, `basidiomycota_odb10` |
-
-Full list: https://busco.ezlab.org/list_of_lineages.html
+- GAQET2 analyses to run:
+```yaml
+gaqet_analyses:
+  - AGAT
+  - BUSCO
+```
 
 **3. Dry-run to check the execution plan:**
 ```bash
@@ -78,15 +97,20 @@ bash run_pipeline.sh --cores 8
 results/
 └── {accession}/
     ├── genome/
-    │   ├── {accession}.fna        # genome FASTA
-    │   └── {accession}.gff3       # genome annotation
-    ├── quast/                     # QUAST assembly report
-    ├── assembly_stats/            # assembly-stats output
-    └── busco/                     # one subdirectory per lineage
-        └── {accession}/
-            └── short_summary.specific.{lineage}.{accession}.txt
+    │   ├── {accession}.fna                       # raw genome FASTA
+    │   ├── {accession}.gff3                      # genome annotation
+    │   ├── {accession}_renamed.fasta             # renamed sequence IDs
+    │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
+    ├── quast/                                    # QUAST assembly report
+    ├── assembly_stats/                           # assembly-stats output
+    ├── busco/                                    # one subdirectory per lineage
+    │   └── {accession}/
+    │       └── short_summary.specific.{lineage}.{accession}.txt
+    └── gaqet/                                    # GAQET2 annotation QC
+        ├── gaqet_config.yaml
+        └── {accession}_GAQET.stats.tsv
 results/multiqc/
-    └── multiqc_report.html        # aggregated report
+    └── multiqc_report.html                       # aggregated report
 ```
 
 ## Configuration
@@ -96,7 +120,22 @@ All settings are in `config/config.yaml`:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `accessions_file` | `accessions.txt` | Path to accession list |
+| `rename_prefix` | `Sp` | Prefix for renamed sequence IDs |
+| `ncbi_fasta_rename_script` | `NCBI_FastaRename` | Path to the rename script |
 | `busco_lineages` | `[embryophyta_odb10]` | List of BUSCO lineages to run |
 | `busco_downloads_path` | `busco_downloads/` | Local cache for BUSCO databases |
 | `quast_min_contig` | `500` | Minimum contig length for QUAST |
+| `gaqet_analyses` | `[AGAT, BUSCO]` | GAQET2 analyses to run |
+| `omark_db` | `""` | OMAmer database path (required for OMARK analysis) |
+| `detenga_db` | `""` | DeTEnGA database path (required for DETENGA analysis) |
 | `threads` | `8` | Threads per job |
+
+### BUSCO lineages reference
+
+| Organism group | Lineage |
+|----------------|---------|
+| Plants | `embryophyta_odb10`, `viridiplantae_odb10` |
+| Animals | `metazoa_odb10`, `vertebrata_odb10`, `mammalia_odb10`, `insecta_odb10` |
+| Fungi | `fungi_odb10`, `ascomycota_odb10`, `basidiomycota_odb10` |
+
+Full list: https://busco.ezlab.org/list_of_lineages.html
