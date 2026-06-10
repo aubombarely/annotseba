@@ -12,6 +12,8 @@ LINEAGES = config["busco_lineages"]
 rule all:
     input:
         expand("results/{acc}/genome/{acc}.gff3", acc=ACCESSIONS),
+        expand("results/{acc}/genome/{acc}_renamed.fasta", acc=ACCESSIONS),
+        expand("results/{acc}/genome/{acc}_renamed.equiv_seqID.txt", acc=ACCESSIONS),
         expand("results/{acc}/quast/report.tsv", acc=ACCESSIONS),
         expand("results/{acc}/assembly_stats/stats.txt", acc=ACCESSIONS),
         expand(
@@ -19,6 +21,7 @@ rule all:
             acc=ACCESSIONS,
             lineage=LINEAGES,
         ),
+        expand("results/{acc}/gaqet/{acc}_GAQET.stats.tsv", acc=ACCESSIONS),
         "results/multiqc/multiqc_report.html",
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
@@ -62,10 +65,32 @@ rule download_genome:
         rm -rf {params.workdir}/tmp {params.zipfile}
         """
 
+# ── Rename FASTA sequence IDs ─────────────────────────────────────────────────
+rule rename_fasta:
+    input:
+        fasta="results/{acc}/genome/{acc}.fna",
+    output:
+        fasta="results/{acc}/genome/{acc}_renamed.fasta",
+        equiv="results/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
+    params:
+        prefix=config.get("rename_prefix", "seq"),
+        out_basename="results/{acc}/genome/{acc}_renamed",
+        script=config.get("ncbi_fasta_rename_script", "NCBI_FastaRename"),
+    log:
+        "logs/rename/{acc}.log",
+    shell:
+        """
+        {params.script} \
+            -f {input.fasta} \
+            -p {params.prefix} \
+            -o {params.out_basename} \
+            >{log} 2>&1
+        """
+
 # ── QUAST assembly statistics ─────────────────────────────────────────────────
 rule run_quast:
     input:
-        fasta="results/{acc}/genome/{acc}.fna",
+        fasta="results/{acc}/genome/{acc}_renamed.fasta",
         gff3="results/{acc}/genome/{acc}.gff3",
     output:
         report="results/{acc}/quast/report.tsv",
@@ -89,7 +114,7 @@ rule run_quast:
 # ── assembly-stats ────────────────────────────────────────────────────────────
 rule run_assembly_stats:
     input:
-        fasta="results/{acc}/genome/{acc}.fna",
+        fasta="results/{acc}/genome/{acc}_renamed.fasta",
     output:
         stats="results/{acc}/assembly_stats/stats.txt",
     log:
@@ -103,7 +128,7 @@ rule run_assembly_stats:
 # ── BUSCO completeness assessment ─────────────────────────────────────────────
 rule run_busco:
     input:
-        fasta="results/{acc}/genome/{acc}.fna",
+        fasta="results/{acc}/genome/{acc}_renamed.fasta",
     output:
         summary="results/{acc}/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
     params:
@@ -125,6 +150,52 @@ rule run_busco:
             --download_path {params.downloads_path} \
             -f \
             >{log} 2>&1
+        """
+
+# ── GAQET2 annotation quality ─────────────────────────────────────────────────
+rule write_gaqet_yaml:
+    input:
+        fasta="results/{acc}/genome/{acc}_renamed.fasta",
+        gff3="results/{acc}/genome/{acc}.gff3",
+    output:
+        yaml="results/{acc}/gaqet/gaqet_config.yaml",
+    params:
+        outdir="results/{acc}/gaqet",
+        threads=config.get("threads", 4),
+        analyses=config.get("gaqet_analyses", ["AGAT", "BUSCO"]),
+        busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
+        omark_db=config.get("omark_db", ""),
+        detenga_db=config.get("detenga_db", ""),
+    run:
+        import yaml, os
+        os.makedirs(params.outdir, exist_ok=True)
+        cfg = {
+            "ID":         wildcards.acc,
+            "Assembly":   input.fasta,
+            "Annotation": input.gff3,
+            "Basedir":    params.outdir,
+            "Threads":    params.threads,
+            "Analysis":   list(params.analyses),
+        }
+        if "BUSCO" in params.analyses:
+            cfg["BUSCO_lineages"] = params.busco_downloads
+        if "OMARK" in params.analyses:
+            cfg["OMARK_db"] = params.omark_db
+        if "DETENGA" in params.analyses:
+            cfg["DETENGA_db"] = params.detenga_db
+        with open(output.yaml, "w") as fh:
+            yaml.dump(cfg, fh, default_flow_style=False)
+
+rule run_gaqet:
+    input:
+        yaml="results/{acc}/gaqet/gaqet_config.yaml",
+    output:
+        stats="results/{acc}/gaqet/{acc}_GAQET.stats.tsv",
+    log:
+        "logs/gaqet/{acc}.log",
+    shell:
+        """
+        GAQET --YAML {input.yaml} >{log} 2>&1
         """
 
 # ── MultiQC aggregate report ───────────────────────────────────────────────────

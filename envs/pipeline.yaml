@@ -11,3 +11,4 @@ dependencies:
   - quast>=5.2
   - busco>=5.4
   - multiqc>=1.14
+  - -c victorgcb gaqet          # GAQET2 and its dependencies (AGAT, GFFread, etc.)

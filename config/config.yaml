@@ -2,6 +2,12 @@
 # Path to a plain text file with one NCBI accession per line (GCA_* or GCF_*)
 accessions_file: "accessions.txt"
 
+# ── FASTA renaming ─────────────────────────────────────────────────────────────
+# Prefix added to every renamed sequence ID (e.g. "Sp" → Sp_C001, Sp_SCF001)
+rename_prefix: "Sp"
+# Path to the NCBI_FastaRename script. Use an absolute path or ensure it is on $PATH.
+ncbi_fasta_rename_script: "NCBI_FastaRename"
+
 # ── BUSCO settings ─────────────────────────────────────────────────────────────
 # One or more BUSCO lineages to run against each genome.
 # Common eukaryotic lineages:
@@ -20,6 +26,18 @@ busco_downloads_path: "busco_downloads"
 # ── QUAST settings ─────────────────────────────────────────────────────────────
 # Contigs shorter than this length (bp) are excluded from statistics
 quast_min_contig: 500
+
+# ── GAQET2 annotation quality ──────────────────────────────────────────────────
+# Analyses to run. Available: AGAT, BUSCO, PSAURON, DETENGA, OMARK, PROTHOMOLOGY
+gaqet_analyses:
+  - AGAT
+  - BUSCO
+
+# Required only if OMARK is listed in gaqet_analyses
+omark_db: ""
+
+# Required only if DETENGA is listed in gaqet_analyses
+detenga_db: ""
 
 # ── Resources ──────────────────────────────────────────────────────────────────
 threads: 8
