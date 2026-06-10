@@ -1,6 +1,9 @@
-# ── Input ──────────────────────────────────────────────────────────────────────
+# ── Input / Output ─────────────────────────────────────────────────────────────
 # Path to a plain text file with one NCBI accession per line (GCA_* or GCF_*)
 accessions_file: "accessions.txt"
+
+# Root directory for all output files
+outdir: "results"
 
 # ── FASTA renaming ─────────────────────────────────────────────────────────────
 # Prefix added to every renamed sequence ID (e.g. "Sp" → Sp_C001, Sp_SCF001)

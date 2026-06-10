@@ -14,40 +14,41 @@ with open(config["accessions_file"]) as fh:
         SAMPLES.append((species, acc))
         ACC_TO_SPECIES[acc] = species
 
-SPECIES  = [s for s, a in SAMPLES]
+SPECIES    = [s for s, a in SAMPLES]
 ACCESSIONS = [a for s, a in SAMPLES]
-LINEAGES = config["busco_lineages"]
+LINEAGES   = config["busco_lineages"]
+OUTDIR     = config.get("outdir", "results")
 
 # ── Target rule ───────────────────────────────────────────────────────────────
 rule all:
     input:
-        expand("results/{species}/{acc}/genome/{acc}.gff3",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.equiv_seqID.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/AssemblyQC/quast/report.tsv",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand("results/{species}/{acc}/AssemblyQC/assembly_stats/stats.txt",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
         [
-            f"results/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES
             for l in LINEAGES
         ],
-        expand("results/{species}/{acc}/AnnotationQC/gaqet/{acc}_GAQET.stats.tsv",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
-        "results/multiqc/multiqc_report.html",
+        f"{OUTDIR}/multiqc/multiqc_report.html",
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
 rule download_genome:
     output:
-        fasta="results/{species}/{acc}/genome/{acc}.fna",
-        gff3="results/{species}/{acc}/genome/{acc}.gff3",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.fna",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
     params:
-        workdir="results/{species}/{acc}/genome",
-        zipfile="results/{species}/{acc}/genome/ncbi_dataset.zip",
+        workdir=f"{OUTDIR}/{{species}}/{{acc}}/genome",
+        zipfile=f"{OUTDIR}/{{species}}/{{acc}}/genome/ncbi_dataset.zip",
     log:
         "logs/download/{species}/{acc}.log",
     retries: 3
@@ -84,13 +85,13 @@ rule download_genome:
 # ── Rename FASTA sequence IDs ─────────────────────────────────────────────────
 rule rename_fasta:
     input:
-        fasta="results/{species}/{acc}/genome/{acc}.fna",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.fna",
     output:
-        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
-        equiv="results/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
+        equiv=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.equiv_seqID.txt",
     params:
         prefix=config.get("rename_prefix", "seq"),
-        out_basename="results/{species}/{acc}/genome/{acc}_renamed",
+        out_basename=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed",
         script=config.get("ncbi_fasta_rename_script", "NCBI_FastaRename"),
     log:
         "logs/rename/{species}/{acc}.log",
@@ -106,12 +107,12 @@ rule rename_fasta:
 # ── QUAST assembly statistics ─────────────────────────────────────────────────
 rule run_quast:
     input:
-        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
-        gff3="results/{species}/{acc}/genome/{acc}.gff3",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
     output:
-        report="results/{species}/{acc}/AssemblyQC/quast/report.tsv",
+        report=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
     params:
-        outdir="results/{species}/{acc}/AssemblyQC/quast",
+        outdir=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast",
         threads=config.get("threads", 4),
         min_contig=config.get("quast_min_contig", 500),
     log:
@@ -130,9 +131,9 @@ rule run_quast:
 # ── assembly-stats ────────────────────────────────────────────────────────────
 rule run_assembly_stats:
     input:
-        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
     output:
-        stats="results/{species}/{acc}/AssemblyQC/assembly_stats/stats.txt",
+        stats=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
     log:
         "logs/assembly_stats/{species}/{acc}.log",
     shell:
@@ -144,11 +145,11 @@ rule run_assembly_stats:
 # ── BUSCO completeness assessment ─────────────────────────────────────────────
 rule run_busco:
     input:
-        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
     output:
-        summary="results/{species}/{acc}/AssemblyQC/busco/{acc}/short_summary.specific.{lineage}.{acc}.txt",
+        summary=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{acc}}/short_summary.specific.{{lineage}}.{{acc}}.txt",
     params:
-        outdir="results/{species}/{acc}/AssemblyQC/busco",
+        outdir=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco",
         threads=config.get("threads", 4),
         mode="genome",
         downloads_path=config.get("busco_downloads_path", "busco_downloads"),
@@ -171,12 +172,12 @@ rule run_busco:
 # ── GAQET2 annotation quality ─────────────────────────────────────────────────
 rule write_gaqet_yaml:
     input:
-        fasta="results/{species}/{acc}/genome/{acc}_renamed.fasta",
-        gff3="results/{species}/{acc}/genome/{acc}.gff3",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
     output:
-        yaml="results/{species}/{acc}/AnnotationQC/gaqet/gaqet_config.yaml",
+        yaml=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/gaqet_config.yaml",
     params:
-        outdir="results/{species}/{acc}/AnnotationQC/gaqet",
+        outdir=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet",
         threads=config.get("threads", 4),
         analyses=config.get("gaqet_analyses", ["AGAT", "BUSCO"]),
         busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
@@ -204,9 +205,9 @@ rule write_gaqet_yaml:
 
 rule run_gaqet:
     input:
-        yaml="results/{species}/{acc}/AnnotationQC/gaqet/gaqet_config.yaml",
+        yaml=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/gaqet_config.yaml",
     output:
-        stats="results/{species}/{acc}/AnnotationQC/gaqet/{acc}_GAQET.stats.tsv",
+        stats=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
     log:
         "logs/gaqet/{species}/{acc}.log",
     shell:
@@ -217,22 +218,22 @@ rule run_gaqet:
 # ── MultiQC aggregate report ───────────────────────────────────────────────────
 rule multiqc:
     input:
-        quast=expand("results/{species}/{acc}/AssemblyQC/quast/report.tsv",
+        quast=expand(f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
                      zip, species=SPECIES, acc=ACCESSIONS),
         busco=[
-            f"results/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES
             for l in LINEAGES
         ],
     output:
-        report="results/multiqc/multiqc_report.html",
+        report=f"{OUTDIR}/multiqc/multiqc_report.html",
     params:
-        outdir="results/multiqc",
+        outdir=f"{OUTDIR}/multiqc",
     log:
         "logs/multiqc.log",
     shell:
         """
-        multiqc results/ \
+        multiqc {OUTDIR}/ \
             --outdir {params.outdir} \
             --force \
             >{log} 2>&1

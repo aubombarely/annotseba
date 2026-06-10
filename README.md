@@ -128,6 +128,7 @@ All settings are in `config/config.yaml`:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `accessions_file` | `accessions.txt` | Path to accession list |
+| `outdir` | `results` | Root directory for all output files |
 | `rename_prefix` | `Sp` | Prefix for renamed sequence IDs |
 | `ncbi_fasta_rename_script` | `NCBI_FastaRename` | Path to the rename script |
 | `busco_lineages` | `[embryophyta_odb10]` | List of BUSCO lineages to run |
