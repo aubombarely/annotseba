@@ -223,7 +223,6 @@ rule write_gaqet_yaml:
         busco_downloads=config.get("busco_downloads_path", "busco_downloads"),
         omark_db=config.get("omark_db", ""),
         detenga_db=config.get("detenga_db", ""),
-        prothomology_dbs=config.get("prothomology_dbs", {}),
         taxa_id=lambda wildcards: ACC_TO_TAXID[wildcards.acc],
     run:
         import yaml, os
@@ -244,7 +243,7 @@ rule write_gaqet_yaml:
         if "DETENGA" in params.analyses:
             cfg["DETENGA_db"] = params.detenga_db
         if "PROTHOMOLOGY" in params.analyses:
-            cfg["PROTHOMOLOGY_tags"] = dict(params.prothomology_dbs)
+            cfg["PROTHOMOLOGY_tags"] = config.get("prothomology_dbs", {})
         with open(output.yaml, "w") as fh:
             yaml.dump(cfg, fh, default_flow_style=False)
 
