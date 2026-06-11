@@ -19,7 +19,7 @@ rename_fasta                           (NCBI_FastaRename)
       │
       ▼
 rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
-  └── {outdir}/{species}/{acc}/genome/{species}_{acc}_ann.gff3
+  └── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.gff3
       │
       ├──▶ AssemblyQC/
       │      ├── run_quast          → {outdir}/{species}/{acc}/AssemblyQC/quast/
@@ -34,7 +34,7 @@ rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
       │
       └──▶ compress  (after all QC)
              ├── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.fasta.gz
-             └── {outdir}/{species}/{acc}/genome/{species}_{acc}_ann.gff3.gz
+             └── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.gff3.gz
 ```
 
 ## Tools used
@@ -135,8 +135,8 @@ Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `-
         ├── genome/
         │   ├── {species}_{accession}_asb.fasta             # assembly with renamed seq IDs
         │   ├── {species}_{accession}_asb.fasta.gz          # compressed after QC
-        │   ├── {species}_{accession}_ann.gff3              # annotation with renamed seq IDs
-        │   ├── {species}_{accession}_ann.gff3.gz           # compressed after QC
+        │   ├── {species}_{accession}_asb.gff3              # annotation with renamed seq IDs
+        │   ├── {species}_{accession}_asb.gff3.gz           # compressed after QC
         │   ├── {species}_{accession}_asb.equiv_seqID.txt   # old → new seq ID mapping
         │   ├── {accession}.fna                             # raw NCBI FASTA (--keep_source only)
         │   └── {accession}.gff3                            # raw NCBI GFF3  (--keep_source only)
