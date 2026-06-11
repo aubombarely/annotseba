@@ -34,9 +34,9 @@ OUTDIR     = config.get("outdir", "results")
 # ── Target rule ───────────────────────────────────────────────────────────────
 rule all:
     input:
-        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
-               zip, species=SPECIES, acc=ACCESSIONS),
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
+               zip, species=SPECIES, acc=ACCESSIONS),
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3",
                zip, species=SPECIES, acc=ACCESSIONS),
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.equiv_seqID.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
@@ -54,14 +54,14 @@ rule all:
         f"{OUTDIR}/multiqc/multiqc_report.html",
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta.gz",
                zip, species=SPECIES, acc=ACCESSIONS),
-        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3.gz",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3.gz",
                zip, species=SPECIES, acc=ACCESSIONS),
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
 rule download_genome:
     output:
         fasta=temp(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.fna"),
-        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        gff3=temp(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3"),
     params:
         workdir=f"{OUTDIR}/{{species}}/{{acc}}/genome",
         zipfile=f"{OUTDIR}/{{species}}/{{acc}}/genome/ncbi_dataset.zip",
@@ -120,11 +120,29 @@ rule rename_fasta:
             >{log} 2>&1
         """
 
+# ── Rename GFF3 sequence IDs to match renamed FASTA ──────────────────────────
+rule rename_gff3:
+    input:
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        equiv=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.equiv_seqID.txt",
+    output:
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3",
+    log:
+        "logs/rename_gff3/{species}/{acc}.log",
+    shell:
+        """
+        agat_sq_rename_seqid.pl \
+            --gff {input.gff3} \
+            --tsv {input.equiv} \
+            --output {output.gff3} \
+            >{log} 2>&1
+        """
+
 # ── QUAST assembly statistics ─────────────────────────────────────────────────
 rule run_quast:
     input:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
-        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3",
     output:
         report=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
     params:
@@ -189,7 +207,7 @@ rule run_busco:
 rule write_gaqet_yaml:
     input:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
-        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3",
     output:
         yaml=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/gaqet_config.yaml",
     params:
@@ -237,7 +255,7 @@ rule run_gaqet:
 rule compress:
     input:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
-        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3",
         # Wait for all QC outputs before compressing
         quast=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
         assembly_stats=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
@@ -248,7 +266,7 @@ rule compress:
         gaqet=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
     output:
         fasta_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta.gz",
-        gff3_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}.gff3.gz",
+        gff3_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.gff3.gz",
     log:
         "logs/compress/{species}/{acc}.log",
     shell:

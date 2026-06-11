@@ -5,17 +5,21 @@ A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their q
 ## Pipeline overview
 
 ```
-accessions.txt  (species<TAB>accession<TAB>taxa_id)
+accessions.txt  (species<TAB>accession<TAB>taxa_id[<TAB>prefix])
       │
       ▼
 download_genome                        (NCBI datasets CLI)
   ├── {outdir}/{species}/{acc}/genome/{acc}.fna   [temp — deleted after renaming]
-  └── {outdir}/{species}/{acc}/genome/{acc}.gff3
+  └── {outdir}/{species}/{acc}/genome/{acc}.gff3  [temp — deleted after renaming]
       │
       ▼
 rename_fasta                           (NCBI_FastaRename)
   ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta
   └── {outdir}/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt
+      │
+      ▼
+rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
+  └── {outdir}/{species}/{acc}/genome/{acc}_renamed.gff3
       │
       ├──▶ AssemblyQC/
       │      ├── run_quast          → {outdir}/{species}/{acc}/AssemblyQC/quast/
@@ -30,7 +34,7 @@ rename_fasta                           (NCBI_FastaRename)
       │
       └──▶ compress  (after all QC)
              ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta.gz
-             └── {outdir}/{species}/{acc}/genome/{acc}.gff3.gz
+             └── {outdir}/{species}/{acc}/genome/{acc}_renamed.gff3.gz
 ```
 
 ## Tools used
@@ -39,6 +43,7 @@ rename_fasta                           (NCBI_FastaRename)
 |------|---------|
 | [NCBI datasets CLI](https://www.ncbi.nlm.nih.gov/datasets/docs/v2/download-and-install/) | Download genome FASTA and GFF3 annotation |
 | [NCBI_FastaRename](https://github.com/aubombarely/GenoToolBox/blob/master/AnnotThis/NCBI_FastaRename) | Rename sequence IDs with a consistent prefix |
+| [AGAT](https://github.com/NBISweden/AGAT) | Rename GFF3 sequence IDs to match the renamed FASTA |
 | [QUAST](https://quast.sourceforge.net/) | Assembly statistics (N50, contigs, gene features via GFF3) |
 | [assembly-stats](https://github.com/sanger-pathogens/assembly-stats) | Lightweight assembly statistics |
 | [BUSCO](https://busco.ezlab.org/) | Genome completeness against conserved gene sets (multiple lineages supported) |
@@ -127,12 +132,12 @@ Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `-
 └── {species}/
     └── {accession}/
         ├── genome/
-        │   ├── {accession}.gff3                      # genome annotation
-        │   ├── {accession}.gff3.gz                   # compressed after QC
         │   ├── {accession}_renamed.fasta             # renamed sequence IDs
         │   ├── {accession}_renamed.fasta.gz          # compressed after QC
+        │   ├── {accession}_renamed.gff3              # annotation with renamed seq IDs
+        │   ├── {accession}_renamed.gff3.gz           # compressed after QC
         │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
-        │   (note: raw {accession}.fna is deleted automatically after renaming)
+        │   (note: raw {accession}.fna and {accession}.gff3 are deleted after renaming)
         ├── AssemblyQC/
         │   ├── quast/                                # QUAST assembly report
         │   ├── assembly_stats/                       # assembly-stats output
@@ -189,6 +194,7 @@ annotseba would not be possible without the following tools. Please cite them ap
 |------|-----------|-----------|
 | NCBI Datasets CLI | https://github.com/ncbi/datasets | Sayers et al. 2022, Nucleic Acids Res. |
 | NCBI_FastaRename | https://github.com/aubombarely/GenoToolBox | — |
+| AGAT | https://github.com/NBISweden/AGAT | Dainat et al. 2021, JOSS |
 | QUAST | https://github.com/ablab/quast | Gurevich et al. 2013, Bioinformatics |
 | assembly-stats | https://github.com/sanger-pathogens/assembly-stats | — |
 | BUSCO | https://gitlab.com/ezlab/busco | Manni et al. 2021, Mol. Biol. Evol. |
@@ -201,7 +207,6 @@ These tools are used internally by GAQET2 depending on which analyses are enable
 
 | Tool | Repository |
 |------|-----------|
-| AGAT | https://github.com/NBISweden/AGAT |
 | GFFread | https://github.com/gpertea/gffread |
 | OMAmer | https://github.com/DessimozLab/omamer |
 | OMArk | https://github.com/DessimozLab/OMArk |
