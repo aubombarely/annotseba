@@ -1,5 +1,7 @@
-# Format: species<TAB>accession<TAB>taxa_id
+# Format: species<TAB>accession<TAB>taxa_id[<TAB>prefix]
 # Species names should not contain spaces (use underscores)
-# taxa_id is the NCBI Taxonomy ID (required for OMARK analysis in GAQET2)
-Homo_sapiens	GCA_000001405.29	9606
-Arabidopsis_thaliana	GCA_000001735.4	3702
+# taxa_id : NCBI Taxonomy ID (required for OMARK analysis in GAQET2)
+# prefix  : optional prefix for renamed sequence IDs (e.g. "Hs", "At")
+#           use NA or omit to fall back to rename_prefix in config.yaml
+Homo_sapiens	GCA_000001405.29	9606	Hs
+Arabidopsis_thaliana	GCA_000001735.4	3702	At

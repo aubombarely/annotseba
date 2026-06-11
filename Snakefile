@@ -7,19 +7,24 @@ print(f"annotseba v{VERSION}")
 
 configfile: "config/config.yaml"
 
-# ── Load accession list (species\taccession\ttaxa_id) ─────────────────────────
+# ── Load accession list (species\taccession\ttaxa_id[\tprefix]) ───────────────
 SAMPLES = []
 ACC_TO_SPECIES = {}
 ACC_TO_TAXID   = {}
+ACC_TO_PREFIX  = {}
 with open(config["accessions_file"]) as fh:
     for line in fh:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
-        species, acc, taxa_id = line.split("\t")
+        fields = line.split("\t")
+        species, acc, taxa_id = fields[0], fields[1], fields[2]
+        prefix = fields[3] if len(fields) > 3 and fields[3].strip().upper() != "NA" \
+                 else config.get("rename_prefix", "seq")
         SAMPLES.append((species, acc))
         ACC_TO_SPECIES[acc] = species
         ACC_TO_TAXID[acc]   = taxa_id
+        ACC_TO_PREFIX[acc]  = prefix
 
 SPECIES    = [s for s, a in SAMPLES]
 ACCESSIONS = [a for s, a in SAMPLES]
@@ -101,7 +106,7 @@ rule rename_fasta:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.fasta",
         equiv=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed.equiv_seqID.txt",
     params:
-        prefix=config.get("rename_prefix", "seq"),
+        prefix=lambda wildcards: ACC_TO_PREFIX[wildcards.acc],
         out_basename=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{acc}}_renamed",
         script=config.get("ncbi_fasta_rename_script", "NCBI_FastaRename"),
     log:
