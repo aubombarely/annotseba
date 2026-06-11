@@ -1,17 +1,17 @@
-# ── Input / Output ─────────────────────────────────────────────────────────────
+# --- Input / Output -----------------------------------------------------------
 # Path to a plain text file with one NCBI accession per line (GCA_* or GCF_*)
 accessions_file: "accessions.txt"
 
 # Root directory for all output files
 outdir: "results"
 
-# ── FASTA renaming ─────────────────────────────────────────────────────────────
-# Prefix added to every renamed sequence ID (e.g. "Sp" → Sp_C001, Sp_SCF001)
+# --- FASTA renaming -----------------------------------------------------------
+# Prefix added to every renamed sequence ID (e.g. "Sp" -> Sp_C001, Sp_SCF001)
 rename_prefix: "Sp"
 # Path to the NCBI_FastaRename script. Use an absolute path or ensure it is on $PATH.
 ncbi_fasta_rename_script: "NCBI_FastaRename"
 
-# ── BUSCO settings ─────────────────────────────────────────────────────────────
+# --- BUSCO settings -----------------------------------------------------------
 # One or more BUSCO lineages to run against each genome.
 # Common eukaryotic lineages:
 #   Plants  : embryophyta_odb10, viridiplantae_odb10
@@ -26,11 +26,11 @@ busco_lineages:
 # Will be created automatically on first run.
 busco_downloads_path: "busco_downloads"
 
-# ── QUAST settings ─────────────────────────────────────────────────────────────
+# --- QUAST settings -----------------------------------------------------------
 # Contigs shorter than this length (bp) are excluded from statistics
 quast_min_contig: 500
 
-# ── GAQET2 annotation quality ──────────────────────────────────────────────────
+# --- GAQET2 annotation quality ------------------------------------------------
 # Analyses to run. Available: AGAT, BUSCO, PSAURON, DETENGA, OMARK, PROTHOMOLOGY
 gaqet_analyses:
   - AGAT
@@ -48,10 +48,10 @@ prothomology_dbs: {}
 #   UniProt: "/path/to/uniprot.fasta"
 #   SwissProt: "/path/to/swissprot.fasta"
 
-# ── Source file retention ──────────────────────────────────────────────────────
+# --- Source file retention ----------------------------------------------------
 # Set to true to keep the raw NCBI files ({acc}.fna and {acc}.gff3) after
 # renaming. By default they are deleted to save disk space.
 keep_source: false
 
-# ── Resources ──────────────────────────────────────────────────────────────────
+# --- Resources ----------------------------------------------------------------
 threads: 8
