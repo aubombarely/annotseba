@@ -42,6 +42,12 @@ omark_db: ""
 # Required only if DETENGA is listed in gaqet_analyses
 detenga_db: ""
 
+# Required only if PROTHOMOLOGY is listed in gaqet_analyses
+# Provide one or more protein databases as TAG: path pairs
+prothomology_dbs: {}
+#   UniProt: "/path/to/uniprot.fasta"
+#   SwissProt: "/path/to/swissprot.fasta"
+
 # ── Source file retention ──────────────────────────────────────────────────────
 # Set to true to keep the raw NCBI files ({acc}.fna and {acc}.gff3) after
 # renaming. By default they are deleted to save disk space.

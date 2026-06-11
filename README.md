@@ -176,6 +176,7 @@ All settings are in `config/config.yaml`:
 | `gaqet_analyses` | `[AGAT, BUSCO]` | GAQET2 analyses to run |
 | `omark_db` | `""` | OMAmer database path (required for OMARK analysis) |
 | `detenga_db` | `""` | DeTEnGA database path (required for DETENGA analysis) |
+| `prothomology_dbs` | `{}` | Protein homology databases as `TAG: path` pairs (required for PROTHOMOLOGY analysis) |
 | `keep_source` | `false` | Keep raw NCBI `{acc}.fna` and `{acc}.gff3` files after renaming |
 | `threads` | `8` | Threads per job |
 
