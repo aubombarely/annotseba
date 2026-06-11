@@ -121,6 +121,7 @@ bash run_annotseba.sh --accessions my_species.tsv --cores 8
 | `-v, --version` | Show version and exit |
 | `-n, --dryrun` | Show execution plan without running |
 | `-c, --cores INT` | Number of CPU cores (default: `$SNAKEMAKE_CORES` or 8) |
+| `-f, --config_file FILE` | Config YAML to merge on top of `config/config.yaml` (later values win) |
 | `-a, --accessions FILE` | Path to accessions TSV (overrides `config.yaml`) |
 | `--keep_source` | Keep raw NCBI files (`{acc}.fna`, `{acc}.gff3`) after renaming |
 

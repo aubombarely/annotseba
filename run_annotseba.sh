@@ -19,6 +19,7 @@ Options:
     -v, --version         Show version and exit
     -n, --dryrun          Dry-run: show what would be executed without running
     -c, --cores INT       Number of CPU cores to use (default: \$SNAKEMAKE_CORES or 8)
+    -f, --config_file FILE Path to a config YAML file (merged on top of default config/config.yaml)
     -a, --accessions FILE Path to accessions TSV file (overrides config.yaml)
     --keep_source         Keep raw NCBI files ({acc}.fna and {acc}.gff3) after renaming
 
@@ -59,6 +60,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -c|--cores)
             CORES="$2"
+            shift 2
+            ;;
+        -f|--config_file)
+            SNAKEMAKE_ARGS+=("--configfile" "$2")
             shift 2
             ;;
         -a|--accessions)
