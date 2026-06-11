@@ -240,14 +240,16 @@ rule write_gaqet_yaml:
             "Analysis":   list(params.analyses),
         }
         if "BUSCO" in params.analyses:
-            cfg["BUSCO_lineages"] = params.busco_downloads
+            cfg["BUSCO_lineages"] = config["busco_lineages"]
         if "OMARK" in params.analyses:
-            cfg["OMARK_db"]  = params.omark_db
-            cfg["taxid"]     = params.taxa_id
+            cfg["OMARK_db"]    = params.omark_db
+            cfg["OMARK_taxid"] = params.taxa_id
         if "DETENGA" in params.analyses:
             cfg["DETENGA_db"] = params.detenga_db
         if "PROTHOMOLOGY" in params.analyses:
-            cfg["PROTHOMOLOGY_tags"] = config.get("prothomology_dbs", {})
+            cfg["PROTHOMOLOGY_tags"] = [
+                {k: v} for k, v in config.get("prothomology_dbs", {}).items()
+            ]
         with open(output.yaml, "w") as fh:
             yaml.dump(cfg, fh, default_flow_style=False)
 
