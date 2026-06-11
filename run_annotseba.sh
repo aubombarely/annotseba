@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION=$(cat "$(dirname "$0")/VERSION" 2>/dev/null || echo "unknown")
+cd "$(dirname "$0")"
+
+VERSION=$(cat VERSION 2>/dev/null || echo "unknown")
 
 usage() {
     cat <<EOF
