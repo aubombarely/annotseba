@@ -1,11 +1,15 @@
 import os
 
-with open("VERSION") as _vf:
+# workflow.basedir is the directory containing this Snakefile — always
+# absolute regardless of where the user runs the pipeline from.
+_basedir = workflow.basedir
+
+with open(os.path.join(_basedir, "VERSION")) as _vf:
     VERSION = _vf.read().strip()
 
 print(f"annotseba v{VERSION}")
 
-configfile: "config/config.yaml"
+configfile: os.path.join(_basedir, "config", "config.yaml")
 
 # ── Load accession list (species\taccession\ttaxa_id[\tprefix]) ───────────────
 SAMPLES = []

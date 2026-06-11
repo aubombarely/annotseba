@@ -87,11 +87,8 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# cd to the repo root so Snakemake finds the Snakefile and all internal
-# relative paths (config/config.yaml, accessions.txt, VERSION) resolve correctly.
-cd "$SCRIPT_DIR"
-
 snakemake \
+    --snakefile "$SCRIPT_DIR/Snakefile" \
     --cores "$CORES" \
     --rerun-incomplete \
     --keep-going \
