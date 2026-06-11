@@ -251,13 +251,25 @@ rule write_gaqet_yaml:
 rule run_gaqet:
     input:
         yaml=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/gaqet_config.yaml",
+        fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta",
+        gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3",
     output:
         stats=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+    params:
+        outbase=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet",
+        taxa_id=lambda wildcards: ACC_TO_TAXID[wildcards.acc],
     log:
         "logs/gaqet/{species}/{acc}.log",
     shell:
         """
-        GAQET --YAML {input.yaml} >{log} 2>&1
+        GAQET \
+            --yaml {input.yaml} \
+            --species {wildcards.species} \
+            --genome {input.fasta} \
+            --annotation {input.gff3} \
+            --taxid {params.taxa_id} \
+            --outbase {params.outbase} \
+            >{log} 2>&1
         """
 
 # ── Compress genome files after all QC is done ────────────────────────────────
