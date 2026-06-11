@@ -42,5 +42,10 @@ omark_db: ""
 # Required only if DETENGA is listed in gaqet_analyses
 detenga_db: ""
 
+# ── Source file retention ──────────────────────────────────────────────────────
+# Set to true to keep the raw NCBI files ({acc}.fna and {acc}.gff3) after
+# renaming. By default they are deleted to save disk space.
+keep_source: false
+
 # ── Resources ──────────────────────────────────────────────────────────────────
 threads: 8

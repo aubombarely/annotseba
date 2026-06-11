@@ -14,12 +14,12 @@ download_genome                        (NCBI datasets CLI)
       │
       ▼
 rename_fasta                           (NCBI_FastaRename)
-  ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta
-  └── {outdir}/{species}/{acc}/genome/{acc}_renamed.equiv_seqID.txt
+  ├── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.fasta
+  └── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.equiv_seqID.txt
       │
       ▼
 rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
-  └── {outdir}/{species}/{acc}/genome/{acc}_renamed.gff3
+  └── {outdir}/{species}/{acc}/genome/{species}_{acc}_ann.gff3
       │
       ├──▶ AssemblyQC/
       │      ├── run_quast          → {outdir}/{species}/{acc}/AssemblyQC/quast/
@@ -33,8 +33,8 @@ rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
       │                                multiqc  → {outdir}/multiqc/multiqc_report.html
       │
       └──▶ compress  (after all QC)
-             ├── {outdir}/{species}/{acc}/genome/{acc}_renamed.fasta.gz
-             └── {outdir}/{species}/{acc}/genome/{acc}_renamed.gff3.gz
+             ├── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.fasta.gz
+             └── {outdir}/{species}/{acc}/genome/{species}_{acc}_ann.gff3.gz
 ```
 
 ## Tools used
@@ -122,6 +122,7 @@ bash run_annotseba.sh --accessions my_species.tsv --cores 8
 | `-n, --dryrun` | Show execution plan without running |
 | `-c, --cores INT` | Number of CPU cores (default: `$SNAKEMAKE_CORES` or 8) |
 | `-a, --accessions FILE` | Path to accessions TSV (overrides `config.yaml`) |
+| `--keep_source` | Keep raw NCBI files (`{acc}.fna`, `{acc}.gff3`) after renaming |
 
 Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `--until <rule>`).
 
@@ -132,12 +133,14 @@ Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `-
 └── {species}/
     └── {accession}/
         ├── genome/
-        │   ├── {accession}_renamed.fasta             # renamed sequence IDs
-        │   ├── {accession}_renamed.fasta.gz          # compressed after QC
-        │   ├── {accession}_renamed.gff3              # annotation with renamed seq IDs
-        │   ├── {accession}_renamed.gff3.gz           # compressed after QC
-        │   └── {accession}_renamed.equiv_seqID.txt   # old → new ID mapping
-        │   (note: raw {accession}.fna and {accession}.gff3 are deleted after renaming)
+        │   ├── {species}_{accession}_asb.fasta             # assembly with renamed seq IDs
+        │   ├── {species}_{accession}_asb.fasta.gz          # compressed after QC
+        │   ├── {species}_{accession}_ann.gff3              # annotation with renamed seq IDs
+        │   ├── {species}_{accession}_ann.gff3.gz           # compressed after QC
+        │   ├── {species}_{accession}_asb.equiv_seqID.txt   # old → new seq ID mapping
+        │   ├── {accession}.fna                             # raw NCBI FASTA (--keep_source only)
+        │   └── {accession}.gff3                            # raw NCBI GFF3  (--keep_source only)
+        │   (note: raw NCBI files are deleted after renaming unless --keep_source is set)
         ├── AssemblyQC/
         │   ├── quast/                                # QUAST assembly report
         │   ├── assembly_stats/                       # assembly-stats output
@@ -172,6 +175,7 @@ All settings are in `config/config.yaml`:
 | `gaqet_analyses` | `[AGAT, BUSCO]` | GAQET2 analyses to run |
 | `omark_db` | `""` | OMAmer database path (required for OMARK analysis) |
 | `detenga_db` | `""` | DeTEnGA database path (required for DETENGA analysis) |
+| `keep_source` | `false` | Keep raw NCBI `{acc}.fna` and `{acc}.gff3` files after renaming |
 | `threads` | `8` | Threads per job |
 
 ### BUSCO lineages reference

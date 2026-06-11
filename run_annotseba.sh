@@ -20,6 +20,7 @@ Options:
     -n, --dryrun          Dry-run: show what would be executed without running
     -c, --cores INT       Number of CPU cores to use (default: \$SNAKEMAKE_CORES or 8)
     -a, --accessions FILE Path to accessions TSV file (overrides config.yaml)
+    --keep_source         Keep raw NCBI files ({acc}.fna and {acc}.gff3) after renaming
 
 Snakemake pass-through:
     Any additional arguments are passed directly to Snakemake.
@@ -63,6 +64,10 @@ while [[ $# -gt 0 ]]; do
         -a|--accessions)
             SNAKEMAKE_ARGS+=("--config" "accessions_file=$2")
             shift 2
+            ;;
+        --keep_source)
+            SNAKEMAKE_ARGS+=("--config" "keep_source=true")
+            shift
             ;;
         *)
             SNAKEMAKE_ARGS+=("$1")
