@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-VERSION=$(cat VERSION 2>/dev/null || echo "unknown")
+VERSION=$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "unknown")
 
 usage() {
     cat <<EOF
@@ -37,15 +37,19 @@ Examples:
     bash run_annotseba.sh --until run_busco
 
 Input:
-    Edit data/species.tsv and config/config.yaml before running.
+    Edit accessions.txt and config/config.yaml before running.
     See README.md for full documentation.
 EOF
 }
 
+# Convert a path to absolute using the caller's working directory.
+# Must be called before cd-ing to SCRIPT_DIR.
+abspath() { [[ "$1" = /* ]] && echo "$1" || echo "$PWD/$1"; }
+
 CORES="${SNAKEMAKE_CORES:-8}"
 SNAKEMAKE_ARGS=()
 
-# Parse arguments
+# Parse arguments — resolve file paths to absolute here, before cd
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
@@ -65,11 +69,11 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         -f|--config_file)
-            SNAKEMAKE_ARGS+=("--configfile" "$2")
+            SNAKEMAKE_ARGS+=("--configfile" "$(abspath "$2")")
             shift 2
             ;;
         -a|--accessions)
-            SNAKEMAKE_ARGS+=("--config" "accessions_file=$2")
+            SNAKEMAKE_ARGS+=("--config" "accessions_file=$(abspath "$2")")
             shift 2
             ;;
         --keep_source)
@@ -82,6 +86,10 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# cd to the repo root so Snakemake finds the Snakefile and all internal
+# relative paths (config/config.yaml, accessions.txt, VERSION) resolve correctly.
+cd "$SCRIPT_DIR"
 
 snakemake \
     --cores "$CORES" \
