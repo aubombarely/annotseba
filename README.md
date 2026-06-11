@@ -88,13 +88,30 @@ gaqet_analyses:
 
 **3. Dry-run to check the execution plan:**
 ```bash
-snakemake --dryrun --cores 8
+bash run_annotseba.sh --dryrun
 ```
 
 **4. Run the pipeline:**
 ```bash
 bash run_annotseba.sh --cores 8
 ```
+
+You can also pass the accessions file directly without editing `config.yaml`:
+```bash
+bash run_annotseba.sh --accessions my_species.tsv --cores 8
+```
+
+## run_annotseba.sh options
+
+| Option | Description |
+|--------|-------------|
+| `-h, --help` | Show help and exit |
+| `-v, --version` | Show version and exit |
+| `-n, --dryrun` | Show execution plan without running |
+| `-c, --cores INT` | Number of CPU cores (default: `$SNAKEMAKE_CORES` or 8) |
+| `-a, --accessions FILE` | Path to accessions TSV (overrides `config.yaml`) |
+
+Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `--until <rule>`).
 
 ## Output structure
 
