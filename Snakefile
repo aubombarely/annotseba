@@ -168,7 +168,6 @@ rule run_quast:
             --output-dir {params.outdir} \
             --threads {params.threads} \
             --min-contig {params.min_contig} \
-            --no-gzip \
             >{log} 2>&1
         """
 
