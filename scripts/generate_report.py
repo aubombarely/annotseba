@@ -102,6 +102,44 @@ PALETTE = [
     "#937860", "#DA8BC3", "#8C8C8C", "#CCB974", "#64B5CD",
 ]
 
+# ── GAQET column grouping ─────────────────────────────────────────────────────
+_GAQET_GROUP_ORDER = ["General", "AGAT", "BUSCO", "PSAURON", "DETENGA", "OMARK", "PROTHOMOLOGY"]
+
+GAQET_GROUP_COLORS = {
+    "General":      "#6c757d",
+    "AGAT":         "#4C72B0",
+    "BUSCO":        "#55A868",
+    "PSAURON":      "#DD8452",
+    "DETENGA":      "#C44E52",
+    "OMARK":        "#8172B3",
+    "PROTHOMOLOGY": "#937860",
+}
+
+# Rules are checked in order; first match wins. AGAT is the catch-all.
+_GAQET_GROUP_RULES = [
+    ("General",      lambda c: c in {"Species", "Accession", "NCBI_TaxID",
+                                     "Assembly_Version", "Annotation_Version"}),
+    ("BUSCO",        lambda c: "BUSCO" in c.upper()),
+    ("PSAURON",      lambda c: "PSAURON" in c.upper()),
+    ("DETENGA",      lambda c: "DETENGA" in c.upper()),
+    ("OMARK",        lambda c: "OMARK" in c.upper()),
+    ("PROTHOMOLOGY", lambda c: "PROTEIN" in c.upper()
+                              or "TREMBL" in c.upper()
+                              or "SWISSPROT" in c.upper()),
+    ("AGAT",         lambda c: True),   # everything else is an AGAT gene-model stat
+]
+
+
+def group_gaqet_columns(columns):
+    """Return [(group_name, [col, ...]), ...] preserving _GAQET_GROUP_ORDER."""
+    buckets = {g: [] for g in _GAQET_GROUP_ORDER}
+    for col in columns:
+        for grp, test in _GAQET_GROUP_RULES:
+            if test(col):
+                buckets[grp].append(col)
+                break
+    return [(g, buckets[g]) for g in _GAQET_GROUP_ORDER if buckets[g]]
+
 
 def _fig_to_b64(fig):
     buf = io.BytesIO()
@@ -182,6 +220,9 @@ tr:nth-child(even){background:#f4f8fc;}
 tr:hover{background:#dce8f4;}
 th[data-sorted=asc]::after{content:' ▲';font-size:.75em;}
 th[data-sorted=desc]::after{content:' ▼';font-size:.75em;}
+tr.grp-hdr th{cursor:default;text-align:center;font-size:.78em;
+  letter-spacing:.06em;text-transform:uppercase;border-bottom:2px solid #fff;}
+tr.grp-hdr th::after{content:'' !important;}
 </style>
 """
 
@@ -223,6 +264,39 @@ def _df_to_html_table(df, table_id):
             f"</table></div>")
 
 
+def _df_to_grouped_html_table(df, table_id, col_groups):
+    """Two-row-header sortable table with colour-coded group spans."""
+    # Header row 1 — group name cells with colspan
+    hrow1 = ""
+    for grp_name, cols in col_groups:
+        color = GAQET_GROUP_COLORS.get(grp_name, "#3a7ab5")
+        hrow1 += (f'<th colspan="{len(cols)}" '
+                  f'style="background:{color}">'
+                  f'{grp_name}</th>')
+
+    # Header row 2 — individual sortable column headers
+    all_cols = [col for _, cols in col_groups for col in cols]
+    hrow2 = "".join(
+        f'<th onclick="sortTable(this)">{c}</th>' for c in all_cols
+    )
+
+    # Body — reorder df to match grouped column order
+    existing = [c for c in all_cols if c in df.columns]
+    rows = "".join(
+        "<tr>" + "".join(f"<td>{v}</td>" for v in row) + "</tr>"
+        for row in df.reindex(columns=existing).itertuples(index=False, name=None)
+    )
+
+    return (f'<div class="tbl-wrap">'
+            f'<table id="{table_id}">'
+            f'<thead>'
+            f'<tr class="grp-hdr">{hrow1}</tr>'
+            f'<tr>{hrow2}</tr>'
+            f'</thead>'
+            f'<tbody>{rows}</tbody>'
+            f'</table></div>')
+
+
 def _png_img(b64, alt):
     if not b64:
         return ""
@@ -233,6 +307,9 @@ def _png_img(b64, alt):
 
 def build_html(asm_df, ann_df, asm_size_b64, cumlen_b64,
                gaqet_img_src, version, date_str):
+    ann_col_groups = group_gaqet_columns(list(ann_df.columns)) if not ann_df.empty else []
+    ann_table = (_df_to_grouped_html_table(ann_df, "tbl_ann", ann_col_groups)
+                 if ann_col_groups else "<p>No annotation data available.</p>")
 
     gaqet_html = ""
     if gaqet_img_src:
@@ -261,7 +338,7 @@ def build_html(asm_df, ann_df, asm_size_b64, cumlen_b64,
 </div>
 
 <h2>Annotation QC</h2>
-{_df_to_html_table(ann_df, "tbl_ann")}
+{ann_table}
 <div class="plots">
   {gaqet_html}
 </div>
