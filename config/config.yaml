@@ -51,6 +51,13 @@ prothomology_dbs: {}
 # Output format for GAQET_PLOT image (png, jpeg, svg, pdf)
 gaqet_plot_format: "png"
 
+# Carbon footprint estimation (used by compute_usage rule)
+# Carbon intensity in gCO2/kWh. Default: IEA 2022 world average.
+# Find your local value at https://app.electricitymaps.com
+carbon_intensity: 475
+# Estimated CPU TDP per core in watts (adjust for your hardware)
+cpu_tdp_per_core: 10
+
 # --- Source file retention ----------------------------------------------------
 # Set to true to keep the raw NCBI files ({acc}.fna and {acc}.gff3) after
 # renaming. By default they are deleted to save disk space.
