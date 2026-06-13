@@ -68,7 +68,7 @@ rule all:
             for s, a in SAMPLES
             for l in LINEAGES
         ],
-        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta.gz",
                zip, species=SPECIES, acc=ACCESSIONS),
@@ -319,7 +319,7 @@ rule run_gaqet:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta",
         gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3",
     output:
-        stats=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+        stats=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
     params:
         outbase=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet",
         taxa_id=lambda wildcards: ACC_TO_TAXID[wildcards.acc],
@@ -342,6 +342,8 @@ rule run_gaqet:
             --taxid {params.taxa_id} \
             --outbase {params.outbase} \
             >{log} 2>&1
+        # GAQET names its output after --species; rename to include the accession
+        mv {params.outbase}/{wildcards.species}_GAQET.stats.tsv {output.stats}
         """
 
 # ── Compress genome files after all QC is done ────────────────────────────────
@@ -356,7 +358,7 @@ rule compress:
             f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{acc}}/short_summary.specific.{l}.{{acc}}.txt"
             for l in LINEAGES
         ],
-        gaqet=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+        gaqet=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
     output:
         fasta_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta.gz",
         gff3_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3.gz",
@@ -378,7 +380,7 @@ rule compress:
 # ── Merge per-species GAQET stats into one TSV ────────────────────────────────
 rule merge_gaqet_stats:
     input:
-        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
     output:
         merged=f"{OUTDIR}/report/all_species_GAQET.stats.tsv",
@@ -423,7 +425,7 @@ rule generate_report:
             for s, a in SAMPLES for l in LINEAGES
         ],
         gaqet=expand(
-            f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+            f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
             zip, species=SPECIES, acc=ACCESSIONS),
         gaqet_plot=f"{OUTDIR}/report/all_species_GAQET.plot.{GAQET_PLOT_FMT}",
     output:

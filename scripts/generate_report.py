@@ -426,7 +426,7 @@ def main():
     ann_dfs = []
     for species, acc in samples:
         gpath = (outdir / species / acc /
-                 "AnnotationQC" / "gaqet" / f"{acc}_GAQET.stats.tsv")
+                 "AnnotationQC" / "gaqet" / f"{species}_{acc}_GAQET.stats.tsv")
         if gpath.exists() and gpath.stat().st_size > 0:
             try:
                 df = pd.read_csv(gpath, sep="\t")
