@@ -95,18 +95,21 @@ rule download_genome:
         # Move the first FASTA found into the expected output path
         fasta=$(find {params.workdir}/tmp -name "*.fna" | head -1)
         if [ -z "$fasta" ]; then
-            echo "ERROR: no .fna file found in downloaded archive" >>{log}
-            exit 1
+            echo "WARNING: no .fna file found for {wildcards.acc} — creating empty placeholder" >>{log}
+            touch {output.fasta} {output.gff3}
+            rm -rf {params.workdir}/tmp {params.zipfile}
+            exit 0
         fi
         mv "$fasta" {output.fasta}
 
         # Move the GFF3 annotation file
         gff=$(find {params.workdir}/tmp -name "*.gff" | head -1)
         if [ -z "$gff" ]; then
-            echo "ERROR: no .gff file found in downloaded archive" >>{log}
-            exit 1
+            echo "WARNING: no .gff file found for {wildcards.acc} — creating empty placeholder" >>{log}
+            touch {output.gff3}
+        else
+            mv "$gff" {output.gff3}
         fi
-        mv "$gff" {output.gff3}
 
         rm -rf {params.workdir}/tmp {params.zipfile}
         """
@@ -126,6 +129,11 @@ rule rename_fasta:
         "logs/rename/{species}/{acc}.log",
     shell:
         """
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping rename" >{log}
+            touch {output.fasta} {output.equiv}
+            exit 0
+        fi
         {params.script} \
             -f {input.fasta} \
             -p {params.prefix} \
@@ -144,6 +152,11 @@ rule rename_gff3:
         "logs/rename_gff3/{species}/{acc}.log",
     shell:
         """
+        if [ ! -s {input.gff3} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping GFF3 rename" >{log}
+            touch {output.gff3}
+            exit 0
+        fi
         agat_sq_rename_seqid.pl \
             --gff {input.gff3} \
             --tsv {input.equiv} \
@@ -166,6 +179,12 @@ rule run_quast:
         "logs/quast/{species}/{acc}.log",
     shell:
         """
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping QUAST" >{log}
+            mkdir -p {params.outdir}
+            touch {output.report}
+            exit 0
+        fi
         quast.py {input.fasta} \
             --features {input.gff3} \
             --output-dir {params.outdir} \
@@ -185,6 +204,11 @@ rule run_assembly_stats:
     shell:
         """
         mkdir -p $(dirname {output.stats})
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping assembly-stats" >{log}
+            touch {output.stats}
+            exit 0
+        fi
         assembly-stats {input.fasta} >{output.stats} 2>{log}
         """
 
@@ -203,6 +227,12 @@ rule run_busco:
         "logs/busco/{species}/{acc}/{lineage}.log",
     shell:
         """
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping BUSCO" >{log}
+            mkdir -p $(dirname {output.summary})
+            touch {output.summary}
+            exit 0
+        fi
         busco \
             -i {input.fasta} \
             -o {wildcards.acc} \
@@ -233,27 +263,30 @@ rule write_gaqet_yaml:
     run:
         import yaml, os
         os.makedirs(params.outdir, exist_ok=True)
-        cfg = {
-            "ID":         wildcards.acc,
-            "Assembly":   input.fasta,
-            "Annotation": input.gff3,
-            "Basedir":    params.outdir,
-            "Threads":    params.threads,
-            "Analysis":   list(params.analyses),
-        }
-        if "BUSCO" in params.analyses:
-            cfg["BUSCO_lineages"] = config["busco_lineages"]
-        if "OMARK" in params.analyses:
-            cfg["OMARK_db"]    = params.omark_db
-            cfg["OMARK_taxid"] = params.taxa_id
-        if "DETENGA" in params.analyses:
-            cfg["DETENGA_db"] = params.detenga_db
-        if "PROTHOMOLOGY" in params.analyses:
-            cfg["PROTHOMOLOGY_tags"] = [
-                {k: v} for k, v in config.get("prothomology_dbs", {}).items()
-            ]
-        with open(output.yaml, "w") as fh:
-            yaml.dump(cfg, fh, default_flow_style=False)
+        if os.path.getsize(str(input.fasta)) == 0:
+            open(str(output.yaml), "w").close()
+        else:
+            cfg = {
+                "ID":         wildcards.acc,
+                "Assembly":   input.fasta,
+                "Annotation": input.gff3,
+                "Basedir":    params.outdir,
+                "Threads":    params.threads,
+                "Analysis":   list(params.analyses),
+            }
+            if "BUSCO" in params.analyses:
+                cfg["BUSCO_lineages"] = config["busco_lineages"]
+            if "OMARK" in params.analyses:
+                cfg["OMARK_db"]    = params.omark_db
+                cfg["OMARK_taxid"] = params.taxa_id
+            if "DETENGA" in params.analyses:
+                cfg["DETENGA_db"] = params.detenga_db
+            if "PROTHOMOLOGY" in params.analyses:
+                cfg["PROTHOMOLOGY_tags"] = [
+                    {k: v} for k, v in config.get("prothomology_dbs", {}).items()
+                ]
+            with open(output.yaml, "w") as fh:
+                yaml.dump(cfg, fh, default_flow_style=False)
 
 rule run_gaqet:
     input:
@@ -269,6 +302,11 @@ rule run_gaqet:
         "logs/gaqet/{species}/{acc}.log",
     shell:
         """
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping GAQET" >{log}
+            touch {output.stats}
+            exit 0
+        fi
         GAQET \
             --yaml {input.yaml} \
             --species {wildcards.species} \
@@ -299,6 +337,11 @@ rule compress:
         "logs/compress/{species}/{acc}.log",
     shell:
         """
+        if [ ! -s {input.fasta} ]; then
+            echo "SKIP ({wildcards.acc}): download failed, skipping compression" >{log}
+            touch {output.fasta_gz} {output.gff3_gz}
+            exit 0
+        fi
         gzip -k {input.fasta} >{log} 2>&1
         gzip -k {input.gff3}  >>{log} 2>&1
         """
@@ -313,10 +356,11 @@ rule merge_gaqet_stats:
     run:
         import pandas as pd, os
         os.makedirs(os.path.dirname(output.merged), exist_ok=True)
-        pd.concat(
-            [pd.read_csv(f, sep="\t") for f in input],
-            ignore_index=True,
-        ).to_csv(output.merged, sep="\t", index=False)
+        dfs = [pd.read_csv(f, sep="\t") for f in input if os.path.getsize(f) > 0]
+        if dfs:
+            pd.concat(dfs, ignore_index=True).to_csv(output.merged, sep="\t", index=False)
+        else:
+            open(output.merged, "w").close()
 
 # ── GAQET_PLOT ─────────────────────────────────────────────────────────────────
 rule run_gaqet_plot:
@@ -327,7 +371,14 @@ rule run_gaqet_plot:
     log:
         "logs/gaqet_plot.log",
     shell:
-        "GAQET_PLOT --input {input.merged} --output {output.plot} >{log} 2>&1"
+        """
+        if [ ! -s {input.merged} ]; then
+            echo "SKIP: no GAQET stats available (all downloads may have failed)" >{log}
+            touch {output.plot}
+            exit 0
+        fi
+        GAQET_PLOT --input {input.merged} --output {output.plot} >{log} 2>&1
+        """
 
 # ── Custom HTML + TSV report ───────────────────────────────────────────────────
 rule generate_report:

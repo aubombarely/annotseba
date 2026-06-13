@@ -300,7 +300,7 @@ def main():
         row  = {"Species": species, "Accession": acc}
 
         qpath = base / "AssemblyQC" / "quast" / "report.tsv"
-        if qpath.exists():
+        if qpath.exists() and qpath.stat().st_size > 0:
             q = parse_quast(qpath)
             row["Total_length_bp"]   = q.get("Total length",   "NA")
             row["Num_contigs"]       = q.get("# contigs",       "NA")
@@ -316,7 +316,7 @@ def main():
             print(f"  Warning: QUAST report missing for {species}/{acc}", file=sys.stderr)
 
         fasta_gz = base / "genome" / f"{species}_{acc}_asb.fasta.gz"
-        if fasta_gz.exists():
+        if fasta_gz.exists() and fasta_gz.stat().st_size > 0:
             try:
                 lengths = get_contig_lengths(fasta_gz)
                 contig_data.append((species, lengths))
@@ -328,7 +328,7 @@ def main():
             lbl   = lineage_label(lin)
             bpath = (base / "AssemblyQC" / "busco" / acc /
                      f"short_summary.specific.{lin}.{acc}.txt")
-            if bpath.exists():
+            if bpath.exists() and bpath.stat().st_size > 0:
                 b = parse_busco(bpath)
                 row[f"BUSCO_{lbl}_C%"]  = b.get("Complete",   "NA")
                 row[f"BUSCO_{lbl}_S%"]  = b.get("Single",     "NA")
@@ -350,7 +350,7 @@ def main():
     for species, acc in samples:
         gpath = (outdir / species / acc /
                  "AnnotationQC" / "gaqet" / f"{acc}_GAQET.stats.tsv")
-        if gpath.exists():
+        if gpath.exists() and gpath.stat().st_size > 0:
             try:
                 df = pd.read_csv(gpath, sep="\t")
                 df.insert(0, "Accession", acc)
@@ -387,7 +387,7 @@ def main():
             print(f"  Warning: cumulative length plot failed: {e}", file=sys.stderr)
 
     gaqet_img_src = None
-    if os.path.exists(args.gaqet_plot):
+    if os.path.exists(args.gaqet_plot) and os.path.getsize(args.gaqet_plot) > 0:
         try:
             gaqet_img_src = embed_image(args.gaqet_plot)
         except Exception as e:
