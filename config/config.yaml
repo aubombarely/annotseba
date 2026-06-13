@@ -48,6 +48,9 @@ prothomology_dbs: {}
 #   UniProt: "/path/to/uniprot.fasta"
 #   SwissProt: "/path/to/swissprot.fasta"
 
+# Output format for GAQET_PLOT image (png, jpeg, svg, pdf)
+gaqet_plot_format: "png"
+
 # --- Source file retention ----------------------------------------------------
 # Set to true to keep the raw NCBI files ({acc}.fna and {acc}.gff3) after
 # renaming. By default they are deleted to save disk space.

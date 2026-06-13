@@ -35,7 +35,8 @@ ACCESSIONS = [a for s, a in SAMPLES]
 LINEAGES   = config["busco_lineages"]
 OUTDIR     = config.get("outdir", "results")
 _ks = config.get("keep_source", False)
-KEEP_SOURCE = _ks if isinstance(_ks, bool) else str(_ks).lower() in ("true", "1", "yes")
+KEEP_SOURCE     = _ks if isinstance(_ks, bool) else str(_ks).lower() in ("true", "1", "yes")
+GAQET_PLOT_FMT  = config.get("gaqet_plot_format", "png")
 
 # ── Target rule ───────────────────────────────────────────────────────────────
 rule all:
@@ -57,11 +58,13 @@ rule all:
         ],
         expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
                zip, species=SPECIES, acc=ACCESSIONS),
-        f"{OUTDIR}/multiqc/multiqc_report.html",
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta.gz",
                zip, species=SPECIES, acc=ACCESSIONS),
         expand(f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3.gz",
                zip, species=SPECIES, acc=ACCESSIONS),
+        f"{OUTDIR}/report/annotseba_AssemblyQC.tsv",
+        f"{OUTDIR}/report/annotseba_AnnotationQC.tsv",
+        f"{OUTDIR}/report/annotseba_report.html",
 
 # ── Download genome from NCBI ─────────────────────────────────────────────────
 rule download_genome:
@@ -300,26 +303,68 @@ rule compress:
         gzip -k {input.gff3}  >>{log} 2>&1
         """
 
-# ── MultiQC aggregate report ───────────────────────────────────────────────────
-rule multiqc:
+# ── Merge per-species GAQET stats into one TSV ────────────────────────────────
+rule merge_gaqet_stats:
     input:
-        quast=expand(f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
-                     zip, species=SPECIES, acc=ACCESSIONS),
+        expand(f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+               zip, species=SPECIES, acc=ACCESSIONS),
+    output:
+        merged=f"{OUTDIR}/report/all_species_GAQET.stats.tsv",
+    run:
+        import pandas as pd, os
+        os.makedirs(os.path.dirname(output.merged), exist_ok=True)
+        pd.concat(
+            [pd.read_csv(f, sep="\t") for f in input],
+            ignore_index=True,
+        ).to_csv(output.merged, sep="\t", index=False)
+
+# ── GAQET_PLOT ─────────────────────────────────────────────────────────────────
+rule run_gaqet_plot:
+    input:
+        merged=f"{OUTDIR}/report/all_species_GAQET.stats.tsv",
+    output:
+        plot=f"{OUTDIR}/report/all_species_GAQET.plot.{GAQET_PLOT_FMT}",
+    log:
+        "logs/gaqet_plot.log",
+    shell:
+        "GAQET_PLOT --input {input.merged} --output {output.plot} >{log} 2>&1"
+
+# ── Custom HTML + TSV report ───────────────────────────────────────────────────
+rule generate_report:
+    input:
+        fasta_gz=expand(
+            f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta.gz",
+            zip, species=SPECIES, acc=ACCESSIONS),
+        quast=expand(
+            f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
+            zip, species=SPECIES, acc=ACCESSIONS),
         busco=[
             f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
-            for s, a in SAMPLES
-            for l in LINEAGES
+            for s, a in SAMPLES for l in LINEAGES
         ],
+        gaqet=expand(
+            f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{acc}}_GAQET.stats.tsv",
+            zip, species=SPECIES, acc=ACCESSIONS),
+        gaqet_plot=f"{OUTDIR}/report/all_species_GAQET.plot.{GAQET_PLOT_FMT}",
     output:
-        report=f"{OUTDIR}/multiqc/multiqc_report.html",
+        assembly_tsv=f"{OUTDIR}/report/annotseba_AssemblyQC.tsv",
+        annotation_tsv=f"{OUTDIR}/report/annotseba_AnnotationQC.tsv",
+        html=f"{OUTDIR}/report/annotseba_report.html",
     params:
-        outdir=f"{OUTDIR}/multiqc",
+        script=os.path.join(_basedir, "scripts", "generate_report.py"),
+        outdir=OUTDIR,
+        accessions=lambda _: config["accessions_file"],
+        lineages=" ".join(LINEAGES),
+        version=VERSION,
     log:
-        "logs/multiqc.log",
+        "logs/generate_report.log",
     shell:
         """
-        multiqc {OUTDIR}/ \
+        python {params.script} \
             --outdir {params.outdir} \
-            --force \
+            --accessions {params.accessions} \
+            --lineages {params.lineages} \
+            --gaqet-plot {input.gaqet_plot} \
+            --version {params.version} \
             >{log} 2>&1
         """

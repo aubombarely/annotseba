@@ -10,6 +10,7 @@ dependencies:
   - assembly-stats
   - quast>=5.2
   - busco>=5.4
-  - multiqc>=1.14
   - typing_extensions>=4.6
   - agat
+  - matplotlib
+  - pandas
