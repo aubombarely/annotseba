@@ -1,4 +1,4 @@
-# annotseba v0.1.0
+# annotseba v0.2.0
 
 A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their quality and completeness, including genome assembly statistics and annotation quality evaluation.
 
@@ -9,8 +9,11 @@ accessions.txt  (species<TAB>accession<TAB>taxa_id[<TAB>prefix])
       │
       ▼
 download_genome                        (NCBI datasets CLI)
-  ├── {outdir}/{species}/{acc}/genome/{acc}.fna   [temp — deleted after renaming]
-  └── {outdir}/{species}/{acc}/genome/{acc}.gff3  [temp — deleted after renaming]
+  ├── {outdir}/{species}/{acc}/genome/{acc}.fna   [temp unless --keep_source]
+  └── {outdir}/{species}/{acc}/genome/{acc}.gff3  [temp unless --keep_source]
+      │
+      │  If NCBI returns no FASTA or GFF3, empty placeholder files are
+      │  created and the accession is skipped in all downstream rules.
       │
       ▼
 rename_fasta                           (NCBI_FastaRename)
@@ -25,16 +28,27 @@ rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
       │      ├── run_quast          → {outdir}/{species}/{acc}/AssemblyQC/quast/
       │      ├── run_assembly_stats → {outdir}/{species}/{acc}/AssemblyQC/assembly_stats/
       │      └── run_busco          → {outdir}/{species}/{acc}/AssemblyQC/busco/
-      │                                        (one run per lineage)
+      │                                        (one run per lineage in busco_lineages)
       ├──▶ AnnotationQC/
       │      └── write_gaqet_yaml + run_gaqet → {outdir}/{species}/{acc}/AnnotationQC/gaqet/
-      │                                    │
-      │                                    ▼
-      │                                multiqc  → {outdir}/multiqc/multiqc_report.html
       │
-      └──▶ compress  (after all QC)
+      └──▶ compress  (after all QC is complete)
              ├── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.fasta.gz
              └── {outdir}/{species}/{acc}/genome/{species}_{acc}_asb.gff3.gz
+                    │
+                    ▼
+             merge_gaqet_stats  → {outdir}/report/all_species_GAQET.stats.tsv
+                    │
+                    ▼
+             run_gaqet_plot     → {outdir}/report/all_species_GAQET.plot.{fmt}
+                    │
+                    ▼
+             generate_report    → {outdir}/report/annotseba_AssemblyQC.tsv
+                                  {outdir}/report/annotseba_AnnotationQC.tsv
+                                  {outdir}/report/annotseba_report.html
+                    │
+                    ▼
+             compute_usage      → {outdir}/report/computer_usage.log
 ```
 
 ## Tools used
@@ -46,9 +60,9 @@ rename_gff3                            (AGAT agat_sq_rename_seqid.pl)
 | [AGAT](https://github.com/NBISweden/AGAT) | Rename GFF3 sequence IDs to match the renamed FASTA |
 | [QUAST](https://quast.sourceforge.net/) | Assembly statistics (N50, contigs, gene features via GFF3) |
 | [assembly-stats](https://github.com/sanger-pathogens/assembly-stats) | Lightweight assembly statistics |
-| [BUSCO](https://busco.ezlab.org/) | Genome completeness against conserved gene sets (multiple lineages supported) |
+| [BUSCO](https://busco.ezlab.org/) | Genome completeness against conserved gene sets (multiple lineages) |
 | [GAQET2](https://github.com/victorgcb1987/GAQET2) | Genome annotation quality evaluation |
-| [MultiQC](https://multiqc.info/) | Aggregate all results into a single HTML report |
+| matplotlib / pandas | Custom HTML+TSV report generation |
 
 ## Installation
 
@@ -57,7 +71,7 @@ conda env create -f envs/pipeline.yaml
 conda activate annotseba
 ```
 
-> **GAQET2 must be installed separately** before running the pipeline, as its heavy dependencies (InterproScan, OMAmer, TEsorter, etc.) can conflict with other tools. Follow the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) and ensure the `GAQET` command is available on your `$PATH` before running annotseba.
+> **GAQET2 must be installed separately** before running the pipeline, as its heavy dependencies (InterproScan, OMAmer, TEsorter, etc.) can conflict with other tools. Follow the [GAQET2 install docs](https://github.com/victorgcb1987/GAQET2) and ensure the `GAQET` and `GAQET_PLOT` commands are available on your `$PATH`.
 
 Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/config.yaml`.
 
@@ -65,9 +79,9 @@ Ensure `NCBI_FastaRename` is on your `$PATH` or set its full path in `config/con
 
 **1. Add your entries to `accessions.txt`** (tab-separated, one per line):
 ```
-Homo_sapiens	GCA_000001405.29	9606	Hs
-Arabidopsis_thaliana	GCA_000001735.4	3702	At
-Oryza_sativa	GCA_000001735.5	4530	NA
+Homo_sapiens          GCA_000001405.29  9606  Hs
+Arabidopsis_thaliana  GCA_000001735.4   3702  At
+Oryza_sativa          GCA_001433935.1   4530  NA
 ```
 
 | Column | Required | Description |
@@ -86,16 +100,22 @@ busco_lineages:
   - viridiplantae_odb10
 ```
 
-- Sequence ID rename prefix:
-```yaml
-rename_prefix: "Sp"
-```
-
 - GAQET2 analyses to run:
 ```yaml
 gaqet_analyses:
   - AGAT
   - BUSCO
+  - PSAURON
+  - DETENGA
+  - OMARK
+  - PROTHOMOLOGY
+```
+
+- Protein homology databases (required only for PROTHOMOLOGY):
+```yaml
+prothomology_dbs:
+  TREMBL:     "/path/to/uniprot_trembl.dmnd"
+  SWISSPROT:  "/path/to/uniprot_sprot.dmnd"
 ```
 
 **3. Dry-run to check the execution plan:**
@@ -108,9 +128,9 @@ bash run_annotseba.sh --dryrun
 bash run_annotseba.sh --cores 8
 ```
 
-You can also pass the accessions file directly without editing `config.yaml`:
+You can also supply a separate config file or accessions file without editing the defaults:
 ```bash
-bash run_annotseba.sh --accessions my_species.tsv --cores 8
+bash run_annotseba.sh --config_file my_project.yaml --accessions my_species.tsv --cores 16
 ```
 
 ## run_annotseba.sh options
@@ -121,7 +141,7 @@ bash run_annotseba.sh --accessions my_species.tsv --cores 8
 | `-v, --version` | Show version and exit |
 | `-n, --dryrun` | Show execution plan without running |
 | `-c, --cores INT` | Number of CPU cores (default: `$SNAKEMAKE_CORES` or 8) |
-| `-f, --config_file FILE` | Config YAML to merge on top of `config/config.yaml` (later values win) |
+| `-f, --config_file FILE` | Config YAML merged on top of `config/config.yaml` (later values win) |
 | `-a, --accessions FILE` | Path to accessions TSV (overrides `config.yaml`) |
 | `--keep_source` | Keep raw NCBI files (`{acc}.fna`, `{acc}.gff3`) after renaming |
 
@@ -141,48 +161,102 @@ Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `-
         │   ├── {species}_{accession}_asb.equiv_seqID.txt   # old → new seq ID mapping
         │   ├── {accession}.fna                             # raw NCBI FASTA (--keep_source only)
         │   └── {accession}.gff3                            # raw NCBI GFF3  (--keep_source only)
-        │   (note: raw NCBI files are deleted after renaming unless --keep_source is set)
         ├── AssemblyQC/
         │   ├── quast/                                # QUAST assembly report
         │   ├── assembly_stats/                       # assembly-stats output
-        │   └── busco/                                # one subdirectory per lineage
+        │   └── busco/
         │       └── {accession}/
         │           └── short_summary.specific.{lineage}.{accession}.txt
         └── AnnotationQC/
-            └── gaqet/                                # GAQET2 annotation QC
+            └── gaqet/
                 ├── gaqet_config.yaml
                 └── {accession}_GAQET.stats.tsv
-{outdir}/multiqc/
-    └── multiqc_report.html                           # aggregated report
+{outdir}/report/
+    ├── all_species_GAQET.stats.tsv       # merged GAQET stats (all accessions)
+    ├── all_species_GAQET.plot.{fmt}      # GAQET_PLOT output
+    ├── annotseba_AssemblyQC.tsv          # assembly QC summary table
+    ├── annotseba_AnnotationQC.tsv        # annotation QC summary table
+    ├── annotseba_report.html             # self-contained HTML report
+    └── computer_usage.log               # disk usage + carbon footprint estimate
+benchmarks/
+└── {rule}/{species}/{accession}.tsv      # Snakemake benchmark (CPU/wall time, memory)
 logs/
-└── {rule}/
-    └── {species}/
-        └── {accession}.log                           # compress, busco also include lineage
+└── {rule}/{species}/{accession}.log
 ```
 
-## Configuration
+## HTML report
 
-All settings are in `config/config.yaml`:
+The pipeline produces a self-contained HTML report (`annotseba_report.html`) with no external dependencies. It contains:
+
+- **Assembly QC table** — sortable table with QUAST metrics (N50, L50, contig counts, GC%, etc.) and BUSCO completeness (Complete / Single / Duplicated / Fragmented / Missing) for each configured lineage.
+- **Assembly size barplot** — total assembly size (Mb) per species.
+- **Cumulative contig length plot** — QUAST-style cumulative plot for all species.
+- **Annotation QC table** — sortable table with all GAQET metrics, grouped by analysis type with colour-coded column headers:
+
+  | Group | Colour | Columns |
+  |-------|--------|---------|
+  | General | grey | Species, Accession, NCBI_TaxID, Assembly_Version, Annotation_Version |
+  | AGAT | blue | Gene model counts, lengths, UTR stats, model completeness |
+  | BUSCO | green | `Annotation_BUSCO_*` |
+  | PSAURON | orange | `PSAURON SCORE` |
+  | DETENGA | red | `DETENGA_FPV`, `DETENGA_FP%` |
+  | OMARK | purple | `OMArk Consistency/Completeness/Species Composition` |
+  | PROTHOMOLOGY | brown | `ProteinsWithTREMBLHits (%)`, `ProteinsWithSWISSPROTHits (%)` |
+
+- **GAQET plot** — image produced by `GAQET_PLOT` across all species, embedded directly in the HTML.
+
+## Resource & carbon usage log
+
+After the report is generated, the `compute_usage` rule writes `{outdir}/report/computer_usage.log` with:
+
+- **Disk usage** — total space used by the output directory (`du`).
+- **Compute time** — total CPU time and wall time aggregated from Snakemake benchmark files.
+- **Carbon footprint estimate** — energy (kWh) and CO₂ equivalent (g) based on:
+
+  ```
+  energy (kWh) = total_CPU_time (h) × cpu_tdp_per_core (W) / 1000
+  CO2 (g)      = energy × carbon_intensity (gCO2/kWh)
+  ```
+
+  Default values use the IEA 2022 world average (475 gCO₂/kWh, 10 W/core). Tune both in `config.yaml` for your hardware and location (see [electricitymaps.com](https://app.electricitymaps.com)).
+
+## Graceful degradation
+
+If NCBI returns no FASTA or GFF3 for an accession (e.g. the record exists but has no genomic sequence available), the pipeline:
+
+1. Logs a warning to `logs/download/{species}/{accession}.log`.
+2. Creates empty placeholder files so Snakemake considers the rule successful.
+3. Skips all downstream rules for that accession (rename, QC, compression).
+4. Excludes the accession from the final report silently.
+
+All other accessions continue to completion and are included in the report normally.
+
+## Configuration reference
+
+All settings live in `config/config.yaml`:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `accessions_file` | `accessions.txt` | Path to accession list |
 | `outdir` | `results` | Root directory for all output files |
-| `rename_prefix` | `Sp` | Prefix for renamed sequence IDs |
+| `rename_prefix` | `Sp` | Default prefix for renamed sequence IDs |
 | `ncbi_fasta_rename_script` | `NCBI_FastaRename` | Path to the rename script |
 | `busco_lineages` | `[embryophyta_odb10]` | List of BUSCO lineages to run |
-| `busco_downloads_path` | `busco_downloads/` | Local cache for BUSCO databases |
-| `quast_min_contig` | `500` | Minimum contig length for QUAST |
+| `busco_downloads_path` | `busco_downloads/` | Local cache for BUSCO lineage databases |
+| `quast_min_contig` | `500` | Minimum contig length (bp) for QUAST |
 | `gaqet_analyses` | `[AGAT, BUSCO]` | GAQET2 analyses to run |
-| `omark_db` | `""` | OMAmer database path (required for OMARK analysis) |
-| `detenga_db` | `""` | DeTEnGA database path (required for DETENGA analysis) |
-| `prothomology_dbs` | `{}` | Protein homology databases as `TAG: path` pairs (required for PROTHOMOLOGY analysis) |
-| `keep_source` | `false` | Keep raw NCBI `{acc}.fna` and `{acc}.gff3` files after renaming |
+| `omark_db` | `""` | OMAmer database path (required for OMARK) |
+| `detenga_db` | `""` | DeTEnGA database path (required for DETENGA) |
+| `prothomology_dbs` | `{}` | Protein databases as `TAG: path` pairs (required for PROTHOMOLOGY) |
+| `gaqet_plot_format` | `png` | Output format for GAQET_PLOT (`png`, `jpeg`, `svg`, `pdf`) |
+| `keep_source` | `false` | Keep raw NCBI `{acc}.fna` / `{acc}.gff3` after renaming |
+| `carbon_intensity` | `475` | Carbon intensity in gCO₂/kWh for footprint estimate |
+| `cpu_tdp_per_core` | `10` | CPU TDP per core in watts for footprint estimate |
 | `threads` | `8` | Threads per job |
 
 ### BUSCO lineages reference
 
-| Organism group | Lineage |
+| Organism group | Lineages |
 |----------------|---------|
 | Plants | `embryophyta_odb10`, `viridiplantae_odb10` |
 | Animals | `metazoa_odb10`, `vertebrata_odb10`, `mammalia_odb10`, `insecta_odb10` |
@@ -205,7 +279,6 @@ annotseba would not be possible without the following tools. Please cite them ap
 | assembly-stats | https://github.com/sanger-pathogens/assembly-stats | — |
 | BUSCO | https://gitlab.com/ezlab/busco | Manni et al. 2021, Mol. Biol. Evol. |
 | GAQET2 | https://github.com/victorgcb1987/GAQET2 | — |
-| MultiQC | https://github.com/MultiQC/MultiQC | Ewels et al. 2016, Bioinformatics |
 
 ### GAQET2 dependencies
 
