@@ -275,7 +275,7 @@ rule run_busco:
             touch {output.summary}
             exit 0
         fi
-        rm -rf {params.outdir}/{wildcards.acc}
+        rm -rf {params.outdir}/{wildcards.acc}/run_{wildcards.lineage}
         busco \
             -i {input.fasta} \
             -o {wildcards.acc} \
