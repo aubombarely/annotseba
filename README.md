@@ -128,6 +128,13 @@ bash run_annotseba.sh --dryrun
 bash run_annotseba.sh --cores 8
 ```
 
+> **Note on `--cores`:** this is a **global** budget shared across the whole pipeline, not a per-job limit. Each job requests the number of threads set by `threads` in `config.yaml` (default 8). With `--cores 8` and `threads: 8`, only one job runs at a time. To process multiple species in parallel, set `--cores` to a multiple of `threads`:
+> ```bash
+> # 3 species in parallel, each using 8 threads
+> bash run_annotseba.sh --cores 24
+> ```
+> Alternatively, lower `threads` in `config.yaml` (e.g. `threads: 4`) so more jobs fit within the core budget.
+
 You can also supply a separate config file or accessions file without editing the defaults:
 ```bash
 bash run_annotseba.sh --config_file my_project.yaml --accessions my_species.tsv --cores 16
