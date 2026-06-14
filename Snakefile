@@ -185,11 +185,19 @@ rule rename_gff3:
             touch {output.gff3}
             exit 0
         fi
+        # Resolve absolute paths before cd so AGAT's side-effect log files
+        # (mrna.agat.log, reformatted_annotation.agat.log) land in the genome
+        # directory instead of the shared working directory.
+        _gff_in=$(realpath {input.gff3})
+        _tsv_in=$(realpath {input.equiv})
+        _gff_out=$(realpath -m {output.gff3})
+        _log=$(realpath -m {log})
+        cd $(dirname $_gff_in)
         agat_sq_rename_seqid.pl \
-            --gff {input.gff3} \
-            --tsv {input.equiv} \
-            --output {output.gff3} \
-            >{log} 2>&1
+            --gff "$_gff_in" \
+            --tsv "$_tsv_in" \
+            --output "$_gff_out" \
+            >"$_log" 2>&1
         """
 
 # ── QUAST assembly statistics ─────────────────────────────────────────────────
