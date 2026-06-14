@@ -2,8 +2,13 @@
 # Path to a plain text file with one NCBI accession per line (GCA_* or GCF_*)
 accessions_file: "accessions.txt"
 
-# Root directory for all output files
-outdir: "results"
+# Top-level run directory. results/, logs/ and benchmarks/ are created inside.
+rundir: "annotseba_run"
+
+# Override individual subdirectories if needed (defaults shown below).
+# outdir:   "annotseba_run/results"
+# logdir:   "annotseba_run/logs"
+# benchdir: "annotseba_run/benchmarks"
 
 # --- FASTA renaming -----------------------------------------------------------
 # Prefix added to every renamed sequence ID (e.g. "Sp" -> Sp_C001, Sp_SCF001)

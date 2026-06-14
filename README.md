@@ -151,45 +151,51 @@ bash run_annotseba.sh --config_file my_project.yaml --accessions my_species.tsv 
 | `-f, --config_file FILE` | Config YAML merged on top of `config/config.yaml` (later values win) |
 | `-a, --accessions FILE` | Path to accessions TSV (overrides `config.yaml`) |
 | `--keep_source` | Keep raw NCBI files (`{acc}.fna`, `{acc}.gff3`) after renaming |
+| `-r, --rundir DIR` | Top-level run directory (default: `annotseba_run`) |
 
 Any unrecognised options are passed directly to Snakemake (e.g. `--forceall`, `--until <rule>`).
 
 ## Output structure
 
+Everything is written under a single top-level run directory (default: `annotseba_run/`):
+
 ```
-{outdir}/
-└── {species}/
-    └── {accession}/
-        ├── genome/
-        │   ├── {species}_{accession}_asb.fasta             # assembly with renamed seq IDs
-        │   ├── {species}_{accession}_asb.fasta.gz          # compressed after QC
-        │   ├── {species}_{accession}_asb.gff3              # annotation with renamed seq IDs
-        │   ├── {species}_{accession}_asb.gff3.gz           # compressed after QC
-        │   ├── {species}_{accession}_asb.equiv_seqID.txt   # old → new seq ID mapping
-        │   ├── {accession}.fna                             # raw NCBI FASTA (--keep_source only)
-        │   └── {accession}.gff3                            # raw NCBI GFF3  (--keep_source only)
-        ├── AssemblyQC/
-        │   ├── quast/                                # QUAST assembly report
-        │   ├── assembly_stats/                       # assembly-stats output
-        │   └── busco/
-        │       └── {accession}/
-        │           └── short_summary.specific.{lineage}.{accession}.txt
-        └── AnnotationQC/
-            └── gaqet/
-                ├── gaqet_config.yaml
-                └── {accession}_GAQET.stats.tsv
-{outdir}/report/
-    ├── all_species_GAQET.stats.tsv       # merged GAQET stats (all accessions)
-    ├── all_species_GAQET.plot.{fmt}      # GAQET_PLOT output
-    ├── annotseba_AssemblyQC.tsv          # assembly QC summary table
-    ├── annotseba_AnnotationQC.tsv        # annotation QC summary table
-    ├── annotseba_report.html             # self-contained HTML report
-    └── computer_usage.log               # disk usage + carbon footprint estimate
-benchmarks/
-└── {rule}/{species}/{accession}.tsv      # Snakemake benchmark (CPU/wall time, memory)
-logs/
-└── {rule}/{species}/{accession}.log
+annotseba_run/               ← rundir (set with --rundir or rundir in config)
+├── results/                 ← outdir
+│   ├── {species}/
+│   │   └── {accession}/
+│   │       ├── genome/
+│   │       │   ├── {species}_{accession}_asb.fasta             # renamed assembly
+│   │       │   ├── {species}_{accession}_asb.fasta.gz          # compressed after QC
+│   │       │   ├── {species}_{accession}_asb.gff3              # renamed annotation
+│   │       │   ├── {species}_{accession}_asb.gff3.gz           # compressed after QC
+│   │       │   ├── {species}_{accession}_asb.equiv_seqID.txt   # old → new seq ID mapping
+│   │       │   ├── {accession}.fna                             # raw NCBI FASTA (--keep_source only)
+│   │       │   └── {accession}.gff3                            # raw NCBI GFF3  (--keep_source only)
+│   │       ├── AssemblyQC/
+│   │       │   ├── quast/
+│   │       │   ├── assembly_stats/
+│   │       │   └── busco/{accession}/
+│   │       │       └── short_summary.specific.{lineage}.{accession}.txt
+│   │       └── AnnotationQC/
+│   │           └── gaqet/
+│   │               ├── gaqet_config.yaml
+│   │               └── {species}_{accession}_GAQET.stats.tsv
+│   └── report/
+│       ├── all_species_GAQET.stats.tsv   # merged GAQET stats (all accessions)
+│       ├── all_species_GAQET.plot.{fmt}  # GAQET_PLOT output
+│       ├── annotseba_AssemblyQC.tsv      # assembly QC summary table
+│       ├── annotseba_AnnotationQC.tsv    # annotation QC summary table
+│       ├── annotseba_report.html         # self-contained HTML report
+│       └── computer_usage.log           # disk usage + carbon footprint estimate
+├── logs/                    ← logdir
+│   └── {rule}/{species}/{accession}.log
+└── benchmarks/              ← benchdir
+    └── {rule}/{species}/{accession}.tsv
 ```
+
+The three subdirectory names can be overridden individually in `config.yaml` (`outdir`, `logdir`, `benchdir`) or by passing an absolute path to any of them.
+
 
 ## HTML report
 
@@ -245,7 +251,10 @@ All settings live in `config/config.yaml`:
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `accessions_file` | `accessions.txt` | Path to accession list |
-| `outdir` | `results` | Root directory for all output files |
+| `rundir` | `annotseba_run` | Top-level directory containing results/, logs/ and benchmarks/ |
+| `outdir` | `{rundir}/results` | Results directory (overrides rundir-derived default) |
+| `logdir` | `{rundir}/logs` | Logs directory (overrides rundir-derived default) |
+| `benchdir` | `{rundir}/benchmarks` | Benchmarks directory (overrides rundir-derived default) |
 | `rename_prefix` | `Sp` | Default prefix for renamed sequence IDs |
 | `ncbi_fasta_rename_script` | `NCBI_FastaRename` | Path to the rename script |
 | `busco_lineages` | `[embryophyta_odb10]` | List of BUSCO lineages to run |

@@ -24,6 +24,8 @@ Options:
     -f, --config_file FILE Path to a config YAML file (merged on top of default config/config.yaml)
     -a, --accessions FILE Path to accessions TSV file (overrides config.yaml)
     --keep_source         Keep raw NCBI files ({acc}.fna and {acc}.gff3) after renaming
+    -r, --rundir DIR      Top-level run directory (default: annotseba_run)
+                          results/, logs/ and benchmarks/ are created inside
 
 Snakemake pass-through:
     Any additional arguments are passed directly to Snakemake.
@@ -79,6 +81,10 @@ while [[ $# -gt 0 ]]; do
         --keep_source)
             SNAKEMAKE_ARGS+=("--config" "keep_source=true")
             shift
+            ;;
+        -r|--rundir)
+            SNAKEMAKE_ARGS+=("--config" "rundir=$2")
+            shift 2
             ;;
         *)
             SNAKEMAKE_ARGS+=("$1")

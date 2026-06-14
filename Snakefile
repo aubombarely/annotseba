@@ -33,21 +33,30 @@ with open(config["accessions_file"]) as fh:
 SPECIES    = [s for s, a in SAMPLES]
 ACCESSIONS = [a for s, a in SAMPLES]
 LINEAGES   = config["busco_lineages"]
-OUTDIR     = config.get("outdir", "results")
+
+# ── Directory layout ──────────────────────────────────────────────────────────
+# All output lands under RUNDIR (default: annotseba_run/).
+# OUTDIR, LOGDIR and BENCHDIR are all subdirectories of RUNDIR.
+# Override any of them individually in config.yaml or via --config on the CLI.
+RUNDIR   = config.get("rundir",  "annotseba_run")
+OUTDIR   = config.get("outdir",  f"{RUNDIR}/results")
+LOGDIR   = config.get("logdir",  f"{RUNDIR}/logs")
+BENCHDIR = config.get("benchdir", f"{RUNDIR}/benchmarks")
+
 _ks = config.get("keep_source", False)
-KEEP_SOURCE     = _ks if isinstance(_ks, bool) else str(_ks).lower() in ("true", "1", "yes")
-GAQET_PLOT_FMT  = config.get("gaqet_plot_format", "png")
+KEEP_SOURCE    = _ks if isinstance(_ks, bool) else str(_ks).lower() in ("true", "1", "yes")
+GAQET_PLOT_FMT = config.get("gaqet_plot_format", "png")
 
 # All benchmark TSVs produced by Snakemake — aggregated for compute_usage rule
 BENCHMARK_FILES = (
-    expand("benchmarks/download/{species}/{acc}.tsv",       zip, species=SPECIES, acc=ACCESSIONS) +
-    expand("benchmarks/rename/{species}/{acc}.tsv",         zip, species=SPECIES, acc=ACCESSIONS) +
-    expand("benchmarks/rename_gff3/{species}/{acc}.tsv",    zip, species=SPECIES, acc=ACCESSIONS) +
-    expand("benchmarks/quast/{species}/{acc}.tsv",          zip, species=SPECIES, acc=ACCESSIONS) +
-    expand("benchmarks/assembly_stats/{species}/{acc}.tsv", zip, species=SPECIES, acc=ACCESSIONS) +
-    [f"benchmarks/busco/{s}/{a}/{l}.tsv" for s, a in SAMPLES for l in LINEAGES] +
-    expand("benchmarks/gaqet/{species}/{acc}.tsv",          zip, species=SPECIES, acc=ACCESSIONS) +
-    expand("benchmarks/compress/{species}/{acc}.tsv",       zip, species=SPECIES, acc=ACCESSIONS)
+    expand(f"{BENCHDIR}/download/{{species}}/{{acc}}.tsv",       zip, species=SPECIES, acc=ACCESSIONS) +
+    expand(f"{BENCHDIR}/rename/{{species}}/{{acc}}.tsv",         zip, species=SPECIES, acc=ACCESSIONS) +
+    expand(f"{BENCHDIR}/rename_gff3/{{species}}/{{acc}}.tsv",    zip, species=SPECIES, acc=ACCESSIONS) +
+    expand(f"{BENCHDIR}/quast/{{species}}/{{acc}}.tsv",          zip, species=SPECIES, acc=ACCESSIONS) +
+    expand(f"{BENCHDIR}/assembly_stats/{{species}}/{{acc}}.tsv", zip, species=SPECIES, acc=ACCESSIONS) +
+    [f"{BENCHDIR}/busco/{s}/{a}/{l}.tsv" for s, a in SAMPLES for l in LINEAGES] +
+    expand(f"{BENCHDIR}/gaqet/{{species}}/{{acc}}.tsv",          zip, species=SPECIES, acc=ACCESSIONS) +
+    expand(f"{BENCHDIR}/compress/{{species}}/{{acc}}.tsv",       zip, species=SPECIES, acc=ACCESSIONS)
 )
 
 # ── Target rule ───────────────────────────────────────────────────────────────
@@ -92,9 +101,9 @@ rule download_genome:
         workdir=f"{OUTDIR}/{{species}}/{{acc}}/genome",
         zipfile=f"{OUTDIR}/{{species}}/{{acc}}/genome/ncbi_dataset.zip",
     benchmark:
-        "benchmarks/download/{species}/{acc}.tsv"
+        f"{BENCHDIR}/download/{{species}}/{{acc}}.tsv"
     log:
-        "logs/download/{species}/{acc}.log",
+        f"{LOGDIR}/download/{{species}}/{{acc}}.log"
     retries: 3
     shell:
         """
@@ -141,9 +150,9 @@ rule rename_fasta:
         out_basename=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb",
         script=config.get("ncbi_fasta_rename_script", "NCBI_FastaRename"),
     benchmark:
-        "benchmarks/rename/{species}/{acc}.tsv"
+        f"{BENCHDIR}/rename/{{species}}/{{acc}}.tsv"
     log:
-        "logs/rename/{species}/{acc}.log",
+        f"{LOGDIR}/rename/{{species}}/{{acc}}.log"
     shell:
         """
         if [ ! -s {input.fasta} ]; then
@@ -166,9 +175,9 @@ rule rename_gff3:
     output:
         gff3=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3",
     benchmark:
-        "benchmarks/rename_gff3/{species}/{acc}.tsv"
+        f"{BENCHDIR}/rename_gff3/{{species}}/{{acc}}.tsv"
     log:
-        "logs/rename_gff3/{species}/{acc}.log",
+        f"{LOGDIR}/rename_gff3/{{species}}/{{acc}}.log"
     shell:
         """
         if [ ! -s {input.gff3} ]; then
@@ -195,9 +204,9 @@ rule run_quast:
         threads=config.get("threads", 4),
         min_contig=config.get("quast_min_contig", 500),
     benchmark:
-        "benchmarks/quast/{species}/{acc}.tsv"
+        f"{BENCHDIR}/quast/{{species}}/{{acc}}.tsv"
     log:
-        "logs/quast/{species}/{acc}.log",
+        f"{LOGDIR}/quast/{{species}}/{{acc}}.log"
     shell:
         """
         if [ ! -s {input.fasta} ]; then
@@ -221,9 +230,9 @@ rule run_assembly_stats:
     output:
         stats=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
     benchmark:
-        "benchmarks/assembly_stats/{species}/{acc}.tsv"
+        f"{BENCHDIR}/assembly_stats/{{species}}/{{acc}}.tsv"
     log:
-        "logs/assembly_stats/{species}/{acc}.log",
+        f"{LOGDIR}/assembly_stats/{{species}}/{{acc}}.log"
     shell:
         """
         mkdir -p $(dirname {output.stats})
@@ -247,9 +256,9 @@ rule run_busco:
         mode="genome",
         downloads_path=config.get("busco_downloads_path", "busco_downloads"),
     benchmark:
-        "benchmarks/busco/{species}/{acc}/{lineage}.tsv"
+        f"{BENCHDIR}/busco/{{species}}/{{acc}}/{{lineage}}.tsv"
     log:
-        "logs/busco/{species}/{acc}/{lineage}.log",
+        f"{LOGDIR}/busco/{{species}}/{{acc}}/{{lineage}}.log"
     shell:
         """
         if [ ! -s {input.fasta} ]; then
@@ -325,9 +334,9 @@ rule run_gaqet:
         outbase=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet",
         taxa_id=lambda wildcards: ACC_TO_TAXID[wildcards.acc],
     benchmark:
-        "benchmarks/gaqet/{species}/{acc}.tsv"
+        f"{BENCHDIR}/gaqet/{{species}}/{{acc}}.tsv"
     log:
-        "logs/gaqet/{species}/{acc}.log",
+        f"{LOGDIR}/gaqet/{{species}}/{{acc}}.log"
     shell:
         """
         if [ ! -s {input.fasta} ]; then
@@ -364,9 +373,9 @@ rule compress:
         fasta_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta.gz",
         gff3_gz=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.gff3.gz",
     benchmark:
-        "benchmarks/compress/{species}/{acc}.tsv"
+        f"{BENCHDIR}/compress/{{species}}/{{acc}}.tsv"
     log:
-        "logs/compress/{species}/{acc}.log",
+        f"{LOGDIR}/compress/{{species}}/{{acc}}.log"
     shell:
         """
         if [ ! -s {input.fasta} ]; then
@@ -401,7 +410,7 @@ rule run_gaqet_plot:
     output:
         plot=f"{OUTDIR}/report/all_species_GAQET.plot.{GAQET_PLOT_FMT}",
     log:
-        "logs/gaqet_plot.log",
+        f"{LOGDIR}/gaqet_plot.log"
     shell:
         """
         if [ ! -s {input.merged} ]; then
@@ -440,7 +449,7 @@ rule generate_report:
         lineages=" ".join(LINEAGES),
         version=VERSION,
     log:
-        "logs/generate_report.log",
+        f"{LOGDIR}/generate_report.log"
     shell:
         """
         python {params.script} \
@@ -467,7 +476,7 @@ rule compute_usage:
         tdp=config.get("cpu_tdp_per_core", 10),
         version=VERSION,
     log:
-        "logs/compute_usage.log",
+        f"{LOGDIR}/compute_usage.log"
     shell:
         """
         python {params.script} \
