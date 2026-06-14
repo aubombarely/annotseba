@@ -258,6 +258,7 @@ rule run_busco:
             touch {output.summary}
             exit 0
         fi
+        rm -rf {params.outdir}/{wildcards.acc}
         busco \
             -i {input.fasta} \
             -o {wildcards.acc} \
