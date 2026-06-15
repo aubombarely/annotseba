@@ -73,7 +73,7 @@ rule all:
         expand(f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
                zip, species=SPECIES, acc=ACCESSIONS),
         [
-            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{l}/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES
             for l in LINEAGES
         ],
@@ -257,9 +257,9 @@ rule run_busco:
     input:
         fasta=f"{OUTDIR}/{{species}}/{{acc}}/genome/{{species}}_{{acc}}_asb.fasta",
     output:
-        summary=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{acc}}/short_summary.specific.{{lineage}}.{{acc}}.txt",
+        summary=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{lineage}}/{{acc}}/short_summary.specific.{{lineage}}.{{acc}}.txt",
     params:
-        outdir=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco",
+        outdir=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{lineage}}",
         threads=config.get("threads", 4),
         mode="genome",
         downloads_path=config.get("busco_downloads_path", "busco_downloads"),
@@ -275,7 +275,7 @@ rule run_busco:
             touch {output.summary}
             exit 0
         fi
-        rm -rf {params.outdir}/{wildcards.acc}/run_{wildcards.lineage}
+        rm -rf {params.outdir}/{wildcards.acc}
         busco \
             -i {input.fasta} \
             -o {wildcards.acc} \
@@ -284,7 +284,6 @@ rule run_busco:
             -m {params.mode} \
             -c {params.threads} \
             --download_path {params.downloads_path} \
-            -f \
             >{log} 2>&1
         """
 
@@ -373,7 +372,7 @@ rule compress:
         quast=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
         assembly_stats=f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/assembly_stats/stats.txt",
         busco=[
-            f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{{acc}}/short_summary.specific.{l}.{{acc}}.txt"
+            f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/busco/{l}/{{acc}}/short_summary.specific.{l}.{{acc}}.txt"
             for l in LINEAGES
         ],
         gaqet=f"{OUTDIR}/{{species}}/{{acc}}/AnnotationQC/gaqet/{{species}}_{{acc}}_GAQET.stats.tsv",
@@ -439,7 +438,7 @@ rule generate_report:
             f"{OUTDIR}/{{species}}/{{acc}}/AssemblyQC/quast/report.tsv",
             zip, species=SPECIES, acc=ACCESSIONS),
         busco=[
-            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{a}/short_summary.specific.{l}.{a}.txt"
+            f"{OUTDIR}/{s}/{a}/AssemblyQC/busco/{l}/{a}/short_summary.specific.{l}.{a}.txt"
             for s, a in SAMPLES for l in LINEAGES
         ],
         gaqet=expand(
