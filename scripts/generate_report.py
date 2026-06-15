@@ -403,7 +403,7 @@ def main():
 
         for lin in lineages:
             lbl   = lineage_label(lin)
-            bpath = (base / "AssemblyQC" / "busco" / acc /
+            bpath = (base / "AssemblyQC" / "busco" / lin / acc /
                      f"short_summary.specific.{lin}.{acc}.txt")
             if bpath.exists() and bpath.stat().st_size > 0:
                 b = parse_busco(bpath)
@@ -430,11 +430,16 @@ def main():
         if gpath.exists() and gpath.stat().st_size > 0:
             try:
                 df = pd.read_csv(gpath, sep="\t")
-                df.insert(0, "Accession", acc)
-                df.insert(0, "Species",   species)
+                if "Accession" not in df.columns:
+                    df.insert(0, "Accession", acc)
+                if "Species" not in df.columns:
+                    df.insert(0, "Species", species)
                 ann_dfs.append(df)
             except Exception as e:
                 print(f"  Warning: could not parse {gpath}: {e}", file=sys.stderr)
+        else:
+            print(f"  Warning: GAQET stats missing or empty for {species}/{acc}: {gpath}",
+                  file=sys.stderr)
 
     ann_df = (pd.concat(ann_dfs, ignore_index=True)
               if ann_dfs else pd.DataFrame(columns=["Species", "Accession"]))
