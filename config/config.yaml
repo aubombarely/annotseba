@@ -3,7 +3,18 @@
 accessions_file: "accessions.txt"
 
 # Top-level run directory. results/, logs/ and benchmarks/ are created inside.
+# Ignored when byspecies_root is set (v2 layout).
 rundir: "annotseba_run"
+
+# --- Phytolaeno v2 integration ------------------------------------------------
+# When set, outputs land inside a pre-existing Phytolaeno BySpecies/ tree
+# (created by generate_species_dir.py) instead of the flat annotseba_run/ dir.
+# Leave empty to use the default v1 layout.
+byspecies_root: ""
+
+# Set to false to skip GAQET annotation quality evaluation.
+# Useful when no annotation (GFF3) is expected for a given accession.
+run_gaqet: true
 
 # Override individual subdirectories if needed (defaults shown below).
 # outdir:   "annotseba_run/results"

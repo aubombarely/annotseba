@@ -351,21 +351,54 @@ def build_html(asm_df, ann_df, asm_size_b64, cumlen_b64,
 # Main
 # ---------------------------------------------------------------------------
 
+def _make_path_fns(args):
+    """Return (get_quast, get_fasta_gz, get_busco, get_gaqet) callables for v1 or v2 layout."""
+    if args.byspecies_root:
+        root = Path(args.byspecies_root)
+        def _base(s, a):    return root / s / "01_Genomes" / a
+        def get_quast(s, a):
+            return _base(s, a) / "01_Assembly_QC" / "quast" / "report.tsv"
+        def get_fasta_gz(s, a):
+            return _base(s, a) / "00_SourceFiles" / f"{s}_{a}_asb.fasta.gz"
+        def get_busco(s, a, lin):
+            return (_base(s, a) / "01_Assembly_QC" / "busco" / lin / a /
+                    f"short_summary.specific.{lin}.{a}.txt")
+        def get_gaqet(s, a):
+            return (_base(s, a) / "03_Annotations" / "01_Gene_model_annotations" /
+                    "00_NCBI_RefSeq" / f"{s}_{a}_GAQET.stats.tsv")
+    else:
+        outdir = Path(args.outdir)
+        def _base(s, a):    return outdir / s / a
+        def get_quast(s, a):
+            return _base(s, a) / "AssemblyQC" / "quast" / "report.tsv"
+        def get_fasta_gz(s, a):
+            return _base(s, a) / "genome" / f"{s}_{a}_asb.fasta.gz"
+        def get_busco(s, a, lin):
+            return (_base(s, a) / "AssemblyQC" / "busco" / lin / a /
+                    f"short_summary.specific.{lin}.{a}.txt")
+        def get_gaqet(s, a):
+            return _base(s, a) / "AnnotationQC" / "gaqet" / f"{s}_{a}_GAQET.stats.tsv"
+    return get_quast, get_fasta_gz, get_busco, get_gaqet
+
+
 def main():
     ap = argparse.ArgumentParser(description="Generate annotseba HTML+TSV reports")
-    ap.add_argument("--outdir",     required=True,  help="Pipeline OUTDIR")
-    ap.add_argument("--accessions", required=True,  help="Path to accessions.txt")
-    ap.add_argument("--lineages",   required=True,  nargs="+", help="BUSCO lineages")
-    ap.add_argument("--gaqet-plot", required=True,  help="Path to GAQET_PLOT output image")
+    layout = ap.add_mutually_exclusive_group(required=True)
+    layout.add_argument("--outdir",         help="Pipeline OUTDIR (v1 layout)")
+    layout.add_argument("--byspecies_root", help="Phytolaeno BySpecies root (v2 layout)")
+    ap.add_argument("--report_dir", required=True, help="Directory to write report files")
+    ap.add_argument("--accessions", required=True, help="Path to accessions TSV file")
+    ap.add_argument("--lineages",   required=True, nargs="+", help="BUSCO lineages")
+    ap.add_argument("--gaqet-plot", required=True, help="Path to GAQET_PLOT output image")
     ap.add_argument("--version",    default="unknown")
     args = ap.parse_args()
 
-    outdir   = Path(args.outdir)
-    lineages = args.lineages
-    samples  = parse_accessions(args.accessions)
-
-    report_dir = outdir / "report"
+    lineages   = args.lineages
+    samples    = parse_accessions(args.accessions)
+    report_dir = Path(args.report_dir)
     report_dir.mkdir(parents=True, exist_ok=True)
+
+    get_quast, get_fasta_gz, get_busco, get_gaqet = _make_path_fns(args)
 
     # ── AssemblyQC data ────────────────────────────────────────────────────
     print("Collecting AssemblyQC data ...", flush=True)
@@ -373,10 +406,9 @@ def main():
     contig_data = []
 
     for species, acc in samples:
-        base = outdir / species / acc
-        row  = {"Species": species, "Accession": acc}
+        row = {"Species": species, "Accession": acc}
 
-        qpath = base / "AssemblyQC" / "quast" / "report.tsv"
+        qpath = get_quast(species, acc)
         if qpath.exists() and qpath.stat().st_size > 0:
             q = parse_quast(qpath)
             row["Total_length_bp"]   = q.get("Total length",   "NA")
@@ -392,7 +424,7 @@ def main():
         else:
             print(f"  Warning: QUAST report missing for {species}/{acc}", file=sys.stderr)
 
-        fasta_gz = base / "genome" / f"{species}_{acc}_asb.fasta.gz"
+        fasta_gz = get_fasta_gz(species, acc)
         if fasta_gz.exists() and fasta_gz.stat().st_size > 0:
             try:
                 lengths = get_contig_lengths(fasta_gz)
@@ -403,8 +435,7 @@ def main():
 
         for lin in lineages:
             lbl   = lineage_label(lin)
-            bpath = (base / "AssemblyQC" / "busco" / lin / acc /
-                     f"short_summary.specific.{lin}.{acc}.txt")
+            bpath = get_busco(species, acc, lin)
             if bpath.exists() and bpath.stat().st_size > 0:
                 b = parse_busco(bpath)
                 row[f"BUSCO_{lbl}_C%"]  = b.get("Complete",   "NA")
@@ -425,8 +456,7 @@ def main():
     print("Collecting AnnotationQC data ...", flush=True)
     ann_dfs = []
     for species, acc in samples:
-        gpath = (outdir / species / acc /
-                 "AnnotationQC" / "gaqet" / f"{species}_{acc}_GAQET.stats.tsv")
+        gpath = get_gaqet(species, acc)
         if gpath.exists() and gpath.stat().st_size > 0:
             try:
                 df = pd.read_csv(gpath, sep="\t")
