@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="35%" r="65%">
+      <stop offset="0%"   stop-color="#0e1430"/>
+      <stop offset="100%" stop-color="#07091c"/>
+    </radialGradient>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="textglow" x="-20%" y="-60%" width="140%" height="220%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <circle cx="200" cy="200" r="196" fill="#06080f"/>
+  <circle cx="200" cy="200" r="185" fill="url(#bg)"/>
+  <circle cx="200" cy="200" r="192" fill="none" stroke="#1a2a5e" stroke-width="1.5"/>
+  <circle cx="200" cy="200" r="186" fill="none" stroke="#0f1a3e" stroke-width="0.6"/>
+
+  <!-- Stars (cool blue-white) -->
+  <g fill="#aabbff" opacity="0.45">
+    <circle cx="68"  cy="82"  r="1"/>
+    <circle cx="335" cy="68"  r="1.5"/>
+    <circle cx="82"  cy="318" r="1"/>
+    <circle cx="350" cy="310" r="1.5"/>
+    <circle cx="112" cy="358" r="1"/>
+    <circle cx="294" cy="363" r="1"/>
+    <circle cx="52"  cy="208" r="1"/>
+    <circle cx="373" cy="178" r="1"/>
+    <circle cx="314" cy="46"  r="1"/>
+    <circle cx="150" cy="41"  r="1.5"/>
+    <circle cx="40"  cy="148" r="1"/>
+    <circle cx="362" cy="248" r="1"/>
+  </g>
+
+  <!-- ── Snake (Snakemake) ─────────────────────────────────────────── -->
+  <!-- Body: S-curve in steel blue -->
+  <path d="M 205,108 C 255,115 268,155 230,172 C 196,188 162,196 172,228 C 180,252 218,262 212,280"
+        fill="none" stroke="#3d80c8" stroke-width="14"
+        stroke-linecap="round" filter="url(#glow)" opacity="0.85"/>
+  <!-- Inner highlight stripe -->
+  <path d="M 205,108 C 255,115 268,155 230,172 C 196,188 162,196 172,228 C 180,252 218,262 212,280"
+        fill="none" stroke="#78b8f0" stroke-width="4"
+        stroke-linecap="round" opacity="0.40"/>
+
+  <!-- Head (facing right) -->
+  <ellipse cx="198" cy="92" rx="28" ry="17"
+           fill="#2a5a9e" stroke="#3d80c8" stroke-width="1.8"
+           filter="url(#glow)"/>
+  <!-- Eye -->
+  <circle cx="212" cy="87" r="5"  fill="#0d2050"/>
+  <circle cx="213" cy="86" r="2.5" fill="#5ac8ff" opacity="0.90"/>
+  <!-- Forked tongue -->
+  <path d="M 224,93 L 240,90 M 240,90 L 247,85 M 240,90 L 244,96"
+        fill="none" stroke="#5ac8ff" stroke-width="1.6"
+        stroke-linecap="round" opacity="0.85"/>
+
+  <!-- ── Pipeline rules (diamonds along the body) ──────────────────── -->
+  <!-- Rule 1: Download -->
+  <polygon points="255,132 265,142 255,152 245,142"
+           fill="#2ec8a6" stroke="#1aaa88" stroke-width="1" filter="url(#glow)" opacity="0.88"/>
+  <text x="255" y="146" font-family="'Courier New',monospace" font-size="7"
+        fill="#e8fffa" text-anchor="middle">DL</text>
+
+  <!-- Rule 2: QC -->
+  <polygon points="236,176 246,186 236,196 226,186"
+           fill="#2ec8a6" stroke="#1aaa88" stroke-width="1" filter="url(#glow)" opacity="0.88"/>
+  <text x="236" y="190" font-family="'Courier New',monospace" font-size="7"
+        fill="#e8fffa" text-anchor="middle">QC</text>
+
+  <!-- Rule 3: Report -->
+  <polygon points="215,250 225,260 215,270 205,260"
+           fill="#c8a83a" stroke="#a08828" stroke-width="1" filter="url(#glow)" opacity="0.85"/>
+  <text x="215" y="264" font-family="'Courier New',monospace" font-size="7"
+        fill="#fffae0" text-anchor="middle">RP</text>
+
+  <!-- Arrows connecting diamonds -->
+  <line x1="250" y1="152" x2="242" y2="176"
+        stroke="#2ec8a6" stroke-width="1" opacity="0.55"
+        marker-end="url(#arr)"/>
+  <line x1="230" y1="196" x2="220" y2="250"
+        stroke="#2ec8a6" stroke-width="1" opacity="0.55"/>
+
+  <!-- ── BUSCO bar chart (below snake tail) ─────────────────────────── -->
+  <line x1="148" y1="244" x2="148" y2="278" stroke="#1a2a5e" stroke-width="1"/>
+  <line x1="148" y1="278" x2="262" y2="278" stroke="#1a2a5e" stroke-width="1"/>
+
+  <rect x="148" y="247" width="90" height="7" rx="2.5"
+        fill="#3d80c8" filter="url(#glow)" opacity="0.85"/>
+  <rect x="148" y="258" width="25" height="7" rx="2.5"
+        fill="#c8a83a" opacity="0.78"/>
+  <rect x="148" y="269" width="11" height="7" rx="2.5"
+        fill="#7a3a22" opacity="0.70"/>
+
+  <g font-family="'Courier New',Courier,monospace" font-size="7.5" fill="#4a6a9a">
+    <text x="148" y="242">BUSCO</text>
+    <text x="242" y="253">complete</text>
+    <text x="177" y="264">fragmented</text>
+    <text x="163" y="275">missing</text>
+  </g>
+
+  <!-- Separator -->
+  <line x1="105" y1="295" x2="295" y2="295" stroke="#1a2a50" stroke-width="0.8"/>
+
+  <!-- Title -->
+  <text x="200" y="320"
+        font-family="'Courier New',Courier,monospace"
+        font-size="27" font-weight="bold"
+        fill="#d0e0ff" text-anchor="middle" letter-spacing="1.5"
+        filter="url(#textglow)">annotseba</text>
+
+  <text x="200" y="342"
+        font-family="'Courier New',Courier,monospace"
+        font-size="9.5" fill="#445588"
+        text-anchor="middle" letter-spacing="1.2">Snakemake  ·  Annotation  ·  QC</text>
+
+</svg>

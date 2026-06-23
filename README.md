@@ -1,5 +1,9 @@
 # annotseba v0.2.0
 
+<p align="center">
+  <img src="assets/annotseba_logo.svg" width="260" alt="annotseba logo"/>
+</p>
+
 A Snakemake pipeline to download eukaryotic genomes from NCBI and assess their quality and completeness, including genome assembly statistics and annotation quality evaluation.
 
 ## Pipeline overview
